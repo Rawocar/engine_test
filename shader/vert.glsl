@@ -22,5 +22,5 @@ void main(void)
 	// übergibt die Eingabefarbe
 
   out_color = in_color;
-	out_vu = in vu;
+	out_vu = in_vu;
 }
