@@ -69,7 +69,6 @@ class CApp
 		unsigned short int size_shader;		// Anzahl an Shader
 		CModel_3D ** ppModel;							// Zeiger auf Models
 		unsigned int number_models;				// Anzahl an Models
-		glm::mat4 view;										// Kamera
 		glm::mat4 projection;							// Projektion auf dem Bildschirm
 		glm::mat4 mvp;										// Kombination aus allen Spaces
     unsigned short int poly_mode;			// sagt aus, ob Punkte, Linien oder Fill gezeichnet werden soll
@@ -78,14 +77,18 @@ class CApp
 		char * pDebug_Str;								// Hier werden Fehlernachrichten gespeichert
 		unsigned short int debug_i;				// hier wird der aktuelle Index gespeichert
 		unsigned short int debug_size;		// Länge des Debug Strings 
+		glm::vec3 camera_pos;							// Position der Kamera
+		glm::vec3 camera_from_dir;				// Richtung, in die die Kamera zeigt
+		glm::vec3 camera_up;							// Up
+		glm::mat4 camera;									// die fertige Kamera
 
 		/*
-			Beschreibung:			gibt das Model Verhalten zurück.
+			Beschreibung:			gibt Position des Model zurück.
 			1. Parameter:			index des Models
 			return:						Modelverhalten
 		*/
 
-		glm::mat4 get_mdl_beh(unsigned int);
+		glm::mat4 get_mdl_pos(unsigned int);
 
 		/*
 			Beschreibung:			Diese Funktion prüft die gesetzten Open GL Attribute.
@@ -93,6 +96,23 @@ class CApp
 		*/
 
 		int check_ogl_attributes();
+
+		/*
+			Beschreibung:			Diese Funktion lädt die Shader.
+			return:						en_err
+		*/
+
+		int init_shader();
+
+		/*
+			Beschreibung:			Diese Funktion lädt einen Shader und gibt die ID
+										zurück.
+			1. Parameter:			Dateipfad
+			2. Parameter:			Die Art des Shader
+			return:						Shader ID
+		*/
+
+		int load_shader(const char*, GLenum);
 
   public:
 
@@ -296,6 +316,47 @@ class CApp
 		*/
 
     void init_debug_log(unsigned short int);
+
+		/*
+			Beschreibung:			Diese Funktion rotiert ein Model anhand ihres Indexes.
+			1. Parameter:			Der Index.
+			2. Parameter:			Rotationsgeschwindigkeit
+			3. Parameter:			Achsen
+		*/
+
+		void rotate(unsigned short int, float, glm::vec3);
+
+		/*
+			Beschreibung:			Diese Funktion initialisiert die Engine.
+												- SDL2
+												- OGL
+												- Shader
+			1. Parameter:			Name des Programmes
+			return:						en_err
+		*/
+	
+		int init_engine(const char*);
+
+    /*
+			Beschreibung:			Diese Funktion entlädt das Shader Programm.
+			1. Parameter:     Programmvariable
+		*/
+
+		void unload_shader();
+
+		/*
+			Beschreibung:			Diese Funktion liefert die Kamera Position.
+			return:						camera_pos
+		*/
+
+		glm::vec3 get_camera_pos();
+
+		/*
+			Beschreibung:			Diese Funktion setzt eine neue Kamera Position.
+			1. Parameter:			neue Position
+		*/
+
+		void set_camera_pos(glm::vec3);
 };
 
 #endif

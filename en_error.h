@@ -31,5 +31,16 @@
 #define ERR_EN_MDL_VBO_DATA									-21								// glBufferData() ist fehlgeschlagen
 #define ERR_EN_MDL_VAO_P										-22								// glVertexAttribPointer() ist fehlgeschlagen
 #define ERR_EN_MDL_ENABLE_VAO								-23								// glEnableVertexAttribArray() ist fehlgeschlagen
+#define ERR_EN_DEPTH_FUNC										-24								// glDepthFunc ist fehlgeschlagen
+#define ERR_EN_DEPTH_TEST										-25								// glEnable depth test ist fehlgeschlagen
+#define ERR_EN_USE_PROG											-26								// glUseProgram ist fehlgeschlagen
+#define	ERR_EN_LINK_PROG										-27								// glLinkProgram ist fehlgeschlagen
+#define ERR_EN_SHADER_PROG									-28								// glCreateProgram ist fehlgeschlagen
+#define ERR_EN_GEN_TEXTURE									-29								// glGenTextures ist fehlgeschlagen
+#define ERR_EN_BIND_TEXTURE									-30								// glBindTexture ist fehlgeschlagen
+#define ERR_EN_LOAD_TEXTURE									-31								// glBindTexture ist fehlgeschlagen
+#define ERR_EN_GL_TEXTURE										-32								// glBindTexture ist fehlgeschlagen
+#define ERR_EN_MIPMAP_TEXTURE								-33								// glBindTexture ist fehlgeschlagen
+#define ERR_EN_MEM_TEXTURE									-34								// es konnte kein Speicher für Texture Mapping reserviert werden
 
 #endif

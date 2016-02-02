@@ -124,9 +124,9 @@ int CApp::set_ogl_attr()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-glm::mat4 CApp::get_mdl_beh(unsigned int i)
+glm::mat4 CApp::get_mdl_pos(unsigned int i)
 {
-  return ppModel[i]->get_mdl_beh();
+  return ppModel[i]->get_mdl_pos();
 }
 
 //------------------------------------------------------------------------
@@ -181,6 +181,92 @@ int CApp::check_ogl_attributes()
 	#endif
 
   return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::init_shader()
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	#if EMODE == EDEBUG_MODE
+		char * pBuffer = NULL;
+		pBuffer = new char[2048];
+	#endif
+
+  // erstelle Shader Programm
+
+	this->shader_program = glCreateProgram();
+
+	if(this->shader_program)
+	{
+		#if EMODE == EDEBUG_MODE
+			this->write_log("<b>ENGINE:</b> glCreateProgram: OK", DB_MSG_OK);
+		#endif
+
+		// Anzahl an Shader
+
+  	this->number_shader(2);
+
+		// Lade Shader
+
+		this->set_shader_id(0, this->load_shader("shader/vert.glsl", GL_VERTEX_SHADER));
+		this->set_shader_id(1, this->load_shader("shader/frag.glsl", GL_FRAGMENT_SHADER));
+
+		// an die GPU senden und auf use schalten
+
+		glLinkProgram(this->shader_program);
+						
+		if(glGetError() == GL_NO_ERROR)
+		{
+			#if EMODE == EDEBUG_MODE
+				this->write_log("<b>ENGINE:</b> glLinkProgram: OK", DB_MSG_OK);
+			#endif
+
+			glUseProgram(this->shader_program);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				#if EMODE == EDEBUG_MODE
+					this->write_log("<b>ENGINE:</b> glUseProgram: OK", DB_MSG_OK);
+				#endif
+			}
+			else
+			{
+				exit_code = ERR_EN_USE_PROG;
+
+				#if EMODE == EDEBUG_MODE
+					sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+					this->write_log(pBuffer, DB_MSG_ERR);
+				#endif
+			}
+		}
+		else
+		{
+			exit_code = ERR_EN_LINK_PROG;
+
+			#if EMODE == EDEBUG_MODE
+				sprintf(pBuffer, "<b>ENGINE:</b> glLinkProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+				this->write_log(pBuffer, DB_MSG_ERR);
+			#endif
+		}
+	}
+	else
+	{
+		exit_code = ERR_EN_SHADER_PROG;
+
+		#if EMODE == EDEBUG_MODE
+			sprintf(pBuffer, "<b>ENGINE:</b> glCreateProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+			this->write_log(pBuffer, DB_MSG_ERR);
+		#endif
+	}
+
+	#if EMODE == EDEBUG_MODE
+		delete [] pBuffer;
+	#endif
+
+	return exit_code;
 }
 
 ///////////////////////////////////////////
@@ -401,20 +487,20 @@ void CApp::init_camera()
 	int height = 0;
   SDL_GetWindowSize(this->pWindow, &width, &height);
 
-  this->view = glm::lookAt
-	(
-  	glm::vec3(0, 0, -1), // Kamera Position in World Space
-  	glm::vec3(0, 0, 0), // Schaut auf die Mitte in World Space
-  	glm::vec3(0, 0, 0)  // upside-down
-	);
-
 	this->projection = glm::perspective
 	(
     45.0f,              // 45 Grad Sichtfeld
-    (float) width / (float) height,
+    (float)((float) width / (float) height),
     0.1f,               // Only render what's 0.1 or more away from camera
     100.0f              // Only render what's 100 or less away from camera
 	);
+
+	// Kamera
+
+	this->camera_pos = glm::vec3(0.0f, 1.0f, 3.0f);
+  this->camera_from_dir = glm::normalize(camera_pos - glm::vec3(0.0f, 0.0f, 0.0f));
+	this->camera_up = glm::cross(camera_from_dir, (glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), camera_from_dir))));
+	this->camera = glm::lookAt(camera_pos, camera_from_dir, camera_up);
 }
 
 //------------------------------------------------------------------------
@@ -422,7 +508,7 @@ void CApp::init_camera()
 
 void CApp::proj_model(unsigned int i)
 {
-  this->mvp = this->projection * this->view * this->get_mdl_beh(i);
+  this->mvp = this->projection * this->camera * this->get_mdl_pos(i);
 	int matrix_id = glGetUniformLocation(this->shader_program, "mvp");
 	glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mvp[0][0]));
 }
@@ -489,6 +575,9 @@ void CApp::create_log()
   FILE * pFile = NULL;
   time_t t = time(NULL);
   struct tm * ts = localtime(&t);
+	int width = 0;
+	int height = 0;
+  SDL_GetWindowSize(this->pWindow, &width, &height);
 
 	// Datei erzeugen / vorher löschen, wenn existiert
 
@@ -496,7 +585,7 @@ void CApp::create_log()
 
   if(pFile != NULL)
 	{
-		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), this->pDebug_Str);
+		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px;\">Window: %dpx * %dpx</h2><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, this->pDebug_Str);
 		fclose(pFile);
 	}
 }
@@ -511,4 +600,173 @@ void CApp::init_debug_log(unsigned short int bytes)
 		this->debug_size = bytes;
 		this->pDebug_Str = new char[this->debug_size];
 	}
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CApp::rotate(unsigned short int i, float rot_speed, glm::vec3 axis)
+{
+	this->ppModel[i]->rotate(rot_speed, axis);
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::init_engine(const char * pApp_name)
+{
+  int exit_code = ERR_EN_NO_ERROR;
+
+	#if EMODE == EDEBUG_MODE
+		char * pBuffer = NULL;
+		pBuffer = new char[200];
+	#endif
+
+	if(SDL_Init(SDL_INIT_EVERYTHING) == 0)
+  {
+    #if EMODE == EDEBUG_MODE
+			this->write_log("<b>ENGINE:</b> SDL2 initialisiert...", DB_MSG_OK);
+		#endif
+
+  	// initialisiere SDL_GL_Attribute
+
+		exit_code = this->set_ogl_attr();
+
+		if(exit_code == ERR_EN_NO_ERROR)
+		{
+  		// initialisiere das Fenster
+
+  		exit_code = this->init_wnd(pApp_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 768, SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+			if(exit_code == ERR_EN_NO_ERROR)
+			{
+				#if EMODE == EDEBUG_MODE
+					this->write_log("<b>ENGINE:</b> SDL2 Fenster initialisiert...", DB_MSG_OK);
+				#endif
+
+  	  	// initialisiere Open GL
+
+				exit_code = this->init_open_gl();
+
+  	  	if(exit_code == ERR_EN_NO_ERROR)
+				{
+					#if EMODE == EDEBUG_MODE
+						this->write_log("<b>ENGINE:</b> OpenGL initialisiert...", DB_MSG_OK);
+					#endif
+
+					// Lade Shader
+
+					exit_code = this->init_shader();
+
+					if(exit_code == ERR_EN_NO_ERROR)
+					{
+						#if EMODE == EDEBUG_MODE
+							this->write_log("<b>ENGINE:</b> Shader initialisiert...", DB_MSG_OK);
+						#endif
+
+						// initialisiere depth buffer
+
+						glEnable(GL_DEPTH_TEST);
+
+						if(glGetError() == GL_NO_ERROR)
+						{
+							#if EMODE == EDEBUG_MODE
+								this->write_log("<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) OK", DB_MSG_OK);
+							#endif
+
+  	  	    	glDepthFunc(GL_LEQUAL);
+
+							if(glGetError() == GL_NO_ERROR)
+							{
+								#if EMODE == EDEBUG_MODE
+									this->write_log("<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) OK", DB_MSG_OK);
+								#endif
+
+								// Lade Kamera
+
+								this->init_camera();
+							}
+							else
+							{
+								exit_code = ERR_EN_DEPTH_FUNC;
+
+								#if EMODE == EDEBUG_MODE
+									sprintf(pBuffer, "<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+									this->write_log(pBuffer, DB_MSG_ERR);
+								#endif
+							}
+						}
+						else
+						{
+							exit_code = ERR_EN_DEPTH_TEST;
+
+							#if EMODE == EDEBUG_MODE
+								sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+								this->write_log(pBuffer, DB_MSG_ERR);
+							#endif
+						}
+					}
+					else
+					{
+						#if EMODE == EDEBUG_MODE
+							sprintf(pBuffer, "<b>ENGINE:</b> Shader konnten nicht initialisiert werden... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+							this->write_log(pBuffer, DB_MSG_ERR);
+						#endif
+					}
+				}
+				else
+				{
+  	  	  #if EMODE == EDEBUG_MODE
+						sprintf(pBuffer, "<b>ENGINE:</b> OpenGL konnte nicht initialisiert werden... FEHLERCODE: %d --end SDL Error: %s --end OpenGL Error: %s --end", exit_code, SDL_GetError(), glewGetErrorString(glGetError()));
+						this->write_log(pBuffer, DB_MSG_ERR);
+					#endif
+				}
+			}
+			else
+			{
+				#if EMODE == EDEBUG_MODE
+					sprintf(pBuffer, "<b>ENGINE:</b> SDL2 Fenster konnte nicht initialisiert werden... FEHLERCODE: %d --end SDL Error: %s --end", exit_code, SDL_GetError());
+					this->write_log(pBuffer, DB_MSG_ERR);
+				#endif
+			}
+  	}
+		else
+		{
+			#if EMODE == EDEBUG_MODE
+				sprintf(pBuffer, "<b>ENGINE:</b> SDL_GL_Attribute konnten nicht gesetzt werden. FEHLERCODE: %d", exit_code);
+				this->write_log(pBuffer, DB_MSG_ERR);
+			#endif
+		}
+
+		#if EMODE == EDEBUG_MODE
+			delete [] pBuffer;
+		#endif
+	}
+	else
+	{
+		#if EMODE == EDEBUG_MODE
+    	this->write_log("<b>ENGINE:</b> SDL2 - Initialisierung ist fehlgeschlagen...", DB_MSG_ERR);
+		#endif
+	}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+glm::vec3 CApp::get_camera_pos()
+{
+	return this->camera_pos;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CApp::set_camera_pos(glm::vec3 new_pos)
+{
+  this->camera_pos = new_pos;
+	this->camera_from_dir = glm::normalize(camera_pos - glm::vec3(0.0f, 0.0f, 0.0f));
+	this->camera_up = glm::cross(camera_from_dir, (glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), camera_from_dir))));
+	this->camera = glm::lookAt(camera_pos, camera_from_dir, camera_up);
 }

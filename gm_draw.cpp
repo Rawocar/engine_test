@@ -16,6 +16,7 @@ int gm_draw(CApp * pApp, Game_State * pstate)
 		case load_menu:
 		{
 			pApp->draw_model(0);
+			pApp->draw_model(1);
 		} break;
 		case quit:
 		{

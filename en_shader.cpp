@@ -1,6 +1,6 @@
 #include "../incl/en_shader.h"
 
-int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
+int CApp::load_shader(const char * pFile, GLenum shader_spec)
 {
   int id = 0;
   int len = len_file(pFile);
@@ -21,7 +21,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 	{
 		#if EMODE == EDEBUG_MODE
 			sprintf(pBuffer, "<b>ENGINE:</b> read_file: \"%s\" OK", pFile);
-			pApp->write_log(pBuffer, DB_MSG_OK);
+			this->write_log(pBuffer, DB_MSG_OK);
 		#endif
 
 		// erstelle Shader handle
@@ -31,7 +31,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 		if(id)
 		{
 			#if EMODE == EDEBUG_MODE
-				pApp->write_log("<b>ENGINE:</b> glCreateShader: OK", DB_MSG_OK);
+				this->write_log("<b>ENGINE:</b> glCreateShader: OK", DB_MSG_OK);
 			#endif
 
 			// sende den Shadercode an OpenGL mittels der ID
@@ -41,7 +41,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 			if(glGetError() == GL_NO_ERROR)
 			{
 				#if EMODE == EDEBUG_MODE
-					pApp->write_log("<b>ENGINE:</b> glShaderSource: OK", DB_MSG_OK);
+					this->write_log("<b>ENGINE:</b> glShaderSource: OK", DB_MSG_OK);
 				#endif
 
 				// kompiliere den Code
@@ -51,22 +51,22 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 				if(glGetError() == GL_NO_ERROR)
 				{
 					#if EMODE == EDEBUG_MODE
-						pApp->write_log("<b>ENGINE:</b> glCompileShader: OK", DB_MSG_OK);
+						this->write_log("<b>ENGINE:</b> glCompileShader: OK", DB_MSG_OK);
 					#endif
 
-					glAttachShader(pApp->get_shader_program_id(), id);
+					glAttachShader(this->shader_program, id);
 
 					if(glGetError() == GL_NO_ERROR)
 					{
 						#if EMODE == EDEBUG_MODE
-							pApp->write_log("<b>ENGINE:</b> glAttachShader: OK", DB_MSG_OK);
+							this->write_log("<b>ENGINE:</b> glAttachShader: OK", DB_MSG_OK);
 						#endif
 					}
 					else
 					{
 						#if EMODE == EDEBUG_MODE
 							sprintf(pBuffer, "<b>ENGINE:</b> glAttachShader: OpenGL Error: %s --end", glewGetErrorString(glGetError()));
-							pApp->write_log(pBuffer, DB_MSG_ERR);
+							this->write_log(pBuffer, DB_MSG_ERR);
 						#endif
 					}
 				}
@@ -74,7 +74,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 				{
 					#if EMODE == EDEBUG_MODE
 						sprintf(pBuffer, "<b>ENGINE:</b> glCompileShader: OpenGL Error: %s --end", glewGetErrorString(glGetError()));
-						pApp->write_log(pBuffer, DB_MSG_ERR);
+						this->write_log(pBuffer, DB_MSG_ERR);
 					#endif
 				}
       }
@@ -82,7 +82,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 			{
 				#if EMODE == EDEBUG_MODE
 					sprintf(pBuffer, "<b>ENGINE:</b> glShaderSource: OpenGL Error: %s --end", glewGetErrorString(glGetError()));
-					pApp->write_log(pBuffer, DB_MSG_ERR);
+					this->write_log(pBuffer, DB_MSG_ERR);
 				#endif
 			}
     }
@@ -90,7 +90,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 		{
 			#if EMODE == EDEBUG_MODE
 				sprintf(pBuffer, "<b>ENGINE:</b> glCreateShader: OpenGL Error: %s --end", glewGetErrorString(glGetError()));
-				pApp->write_log(pBuffer, DB_MSG_ERR);
+				this->write_log(pBuffer, DB_MSG_ERR);
 			#endif
 		}
 	}
@@ -98,7 +98,7 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 	{
 		#if EMODE == EDEBUG_MODE
 			sprintf(pBuffer, "<b>ENGINE:</b> load_shader: FEHLERCODE: %d --end", exit_code);
-			pApp->write_log(pBuffer, DB_MSG_ERR);
+			this->write_log(pBuffer, DB_MSG_ERR);
 		#endif
 	}
 
@@ -116,19 +116,19 @@ int load_shader(const char * pFile, GLenum shader_spec, CApp * pApp)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void unload_shader(CApp * pApp)
+void CApp::unload_shader()
 {
 	// shader entladen
 
-  for(unsigned short int i = 0 ; i < (pApp->get_shader_number()) ; i++)
-		{glDetachShader(pApp->get_shader_program_id(), pApp->get_shader_id(i));}
+  for(unsigned short int i = 0 ; i < (this->get_shader_number()) ; i++)
+		{glDetachShader(this->shader_program, this->get_shader_id(i));}
 
 	// Programm löschen
 
-	glDeleteProgram(pApp->get_shader_program_id());
+	glDeleteProgram(this->shader_program);
 
 	// shader löschen
 
-	for(unsigned short int i = 0 ; i < (pApp->get_shader_number()) ; i++)
-    {glDeleteShader(pApp->get_shader_id(i));}
+	for(unsigned short int i = 0 ; i < (this->get_shader_number()) ; i++)
+    {glDeleteShader(this->get_shader_id(i));}
 }

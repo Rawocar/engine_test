@@ -6,7 +6,7 @@ int gm_update(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 
 	// Events
 
-	event_handler(pApp->get_eventx(), pstate, ppoly_mode);
+	event_handler(pApp->get_eventx(), pstate, ppoly_mode, pApp);
 
 	// Spielzustände
 
@@ -16,13 +16,16 @@ int gm_update(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 		{
       // Projektion von Model 0 berechnen
 
+			pApp->rotate(0, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
 			pApp->proj_model(0);
+			//pApp->rotate(1, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//pApp->proj_model(1);
 		} break;
 		case quit:
 		{
 			// Shader entladen
 
-			unload_shader(pApp);
+			pApp->unload_shader();
 		} break;
 	};
 
