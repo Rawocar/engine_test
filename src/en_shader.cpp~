@@ -1,0 +1,62 @@
+#include "../incl/en_shader.h"
+
+int load_shader(const char * pFile, GLenum shader_spec)
+{
+  int id = 0;
+  int len = len_file(pFile);
+  char * pSrc = new char[len + 1];
+	const char * pCSrc = (const char*)pSrc;
+
+  // lese die GLSL Datei aus
+
+	if(read_file(pFile, pSrc, len) == EXIT_SUCCESS)
+	{
+		// erstelle Shader handle
+
+		id = glCreateShader(shader_spec);
+
+		// sende den Shadercode an OpenGL mittels der ID
+
+  	glShaderSource(id, 1, &pCSrc, &len);
+
+		// kompiliere den Code
+
+		glCompileShader(id);
+
+		// Prüfe Komipilierung auf Erfolg
+/*
+		int length = 0;
+    glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+		char * pShaderLog = new char[length];
+		glGetShaderInfoLog(id, length, &length, pShaderLog);
+		printf("%s\n", pShaderLog);
+
+		delete [] pShaderLog;*/
+	}
+
+	// zerlegen
+
+	delete [] pSrc;
+
+	return id;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void unload_shader(CApp * pApp)
+{
+	// shader entladen
+
+  for(unsigned short int i = 0 ; i < (pApp->get_shader_number()) ; i++)
+		{glDetachShader(pApp->get_shader_program_id(), pApp->get_shader_id(i));}
+
+	// Programm löschen
+
+	glDeleteProgram(pApp->get_shader_program_id());
+
+	// shader löschen
+
+	for(unsigned short int i = 0 ; i < (pApp->get_shader_number()) ; i++)
+    {glDeleteShader(pApp->get_shader_id(i));}
+}

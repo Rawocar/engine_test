@@ -1,0 +1,75 @@
+#include "../incl/gm_run.h"
+
+int run()
+{
+  int exit_code = EXIT_SUCCESS;
+  CApp * pApp = new CApp();
+	Game_State state = load_menu;
+
+  // init SDL
+
+	if(SDL_Init(SDL_INIT_EVERYTHING) == 0)
+  {
+    #if MODE == DEBUG_MODE
+      printf("SDL 2 initialized...\n");
+		#endif
+
+		// initialisiere das Spiel
+
+		exit_code = init(pApp);
+    
+		if(exit_code == EXIT_SUCCESS)
+		{
+      #if MODE == DEBUG_MODE
+				printf("Window created...\nOpen GL intialized...\nShader loaded...\n");
+			#endif
+
+			// initialisiere CPU Messgerät
+
+      pApp->cpu_set_timestamp(SDL_GetTicks());
+      pApp->cpu_set_timestep(pApp->cpu_get_timestamp() * 0.001);
+			pApp->cpu_set_timestamp_prev();
+
+			// Programmschleife
+
+		  while(SDL_PollEvent(pApp->get_event()) || (exit_code == EXIT_SUCCESS && state != quit))
+			{
+				if(exit_code == EXIT_SUCCESS) // von gm_update
+				{
+					exit_code = gm_draw(pApp, &state);
+				
+					if(exit_code == EXIT_SUCCESS)
+					{
+						exit_code = gm_update(pApp, &state);
+
+						// Prozessor messen
+
+						pApp->cpu_set_timestamp_prev();
+						pApp->cpu_set_timestamp(SDL_GetTicks());
+						pApp->cpu_set_timestep((pApp->cpu_get_timestamp() - pApp->cpu_get_timestamp_prev()) * 0.001);
+					}
+				}
+			}
+		}
+		else
+		{
+			#if MODE == DEBUG_MODE
+				printf("ERROR: init() failed...\n");
+			#endif
+		}
+  }
+  else
+	{
+		exit_code = EINVAL;
+
+		#if MODE == DEBUG_MODE
+    	printf("ERROR: could not init SDL 2...\n");
+		#endif
+  }
+
+	// Speicher zerlegen
+
+	delete pApp;
+
+  return exit_code;
+}
