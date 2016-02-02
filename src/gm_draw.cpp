@@ -9,6 +9,10 @@ int gm_draw(CApp * pApp, Game_State * pstate)
   glClearColor(0.0, 0.0, 0.11, 1.0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+	// Kamera
+
+	pApp->proj();
+
 	// Spielstatus
 
 	switch(*pstate)

@@ -175,9 +175,11 @@ void CModel_3D::add_vertex_col(float r, float g, float b, float a)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::draw()
+void CModel_3D::draw(int shader_program_id)
 {
 	glBindVertexArray(this->id_vao);
+	int matrix_id = glGetUniformLocation(shader_program_id, "model");
+	glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mdl[0][0]));
 	glDrawArrays(GL_TRIANGLES, 0, this->number_vertexes);
 }
 
@@ -186,7 +188,7 @@ void CModel_3D::draw()
 
 glm::mat4 CModel_3D::get_mdl_pos()
 {
-	return this->mdl_pos;
+	return this->mdl;
 }
 
 //------------------------------------------------------------------------
@@ -194,7 +196,7 @@ glm::mat4 CModel_3D::get_mdl_pos()
 
 void CModel_3D::set_mdl_pos(float x, float y, float z)
 {
-  this->mdl_pos = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+  this->mdl = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
 }
 
 //------------------------------------------------------------------------
@@ -234,12 +236,12 @@ void CModel_3D::create_cube(float size, uint8_t red, uint8_t green, uint8_t blue
   this->add_vertex_pos(size, -size, -size);			
   this->add_vertex_pos(size, size, -size);		
   this->add_vertex_pos(size, size, size);				
-  this->add_vertex_pos(size, -size, size);				// FRONT
-  this->add_vertex_pos(-size, -size, size);			
-  this->add_vertex_pos(-size, size, size);			
-  this->add_vertex_pos(-size, size, size);		
-  this->add_vertex_pos(size, size, size);		
-  this->add_vertex_pos(size, -size, size);		
+  this->add_vertex_pos(size, -size, size);				// FRONT right bottom
+  this->add_vertex_pos(-size, -size, size);				// FRONT left bottom
+  this->add_vertex_pos(-size, size, size);				// FRONT left top
+  this->add_vertex_pos(-size, size, size);				// FRONT left top
+  this->add_vertex_pos(size, size, size);					// FRONT right top
+  this->add_vertex_pos(size, -size, size);				// FRONT right bottom
   this->add_vertex_pos(-size, size, -size);				// TOP
 	this->add_vertex_pos(-size, size, size);		
   this->add_vertex_pos(size, size, size);			
@@ -262,13 +264,13 @@ void CModel_3D::create_cube(float size, uint8_t red, uint8_t green, uint8_t blue
 
 void CModel_3D::rotate(float rot_speed, glm::vec3 axis)
 {
-  this->mdl_pos = glm::rotate(this->mdl_pos, rot_speed, axis);
+  this->mdl = glm::rotate(this->mdl, rot_speed, axis);
 }
 
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-int CModel_3D::set_texture(const char * pFile)
+int CModel_3D::set_texture_cube(const char * pFile)
 {
   int exit_code = ERR_EN_NO_ERROR;
 	int width = 0;
@@ -295,46 +297,87 @@ int CModel_3D::set_texture(const char * pFile)
 
 				if(glGetError() == GL_NO_ERROR)
 				{
-					glGenerateMipmap(GL_TEXTURE_2D);
-
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+ 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					
 					if(glGetError() == GL_NO_ERROR)
 					{
-						// Speicher bereinigen
+						glGenerateMipmap(GL_TEXTURE_2D);
 
-						SOIL_free_image_data(pImg_data);
-
-						// Lege Texturkoordinaten fest
-
-						this->pTex_Pos = new Point[4];
-
-						if(this->pTex_Pos != NULL)
+						if(glGetError() == GL_NO_ERROR)
 						{
-							pTex_Pos[0].x = 0.0f;			// bottom left
-							pTex_Pos[0].y = 0.0f;
-							pTex_Pos[1].x = 0.1f;			// bottom right
-							pTex_Pos[1].y = 0.0f;
-							pTex_Pos[2].x = 0.1f;			// top right
-							pTex_Pos[2].y = 0.1f;
-							pTex_Pos[3].x = 0.0f;			// top left
-							pTex_Pos[3].y = 0.1f;
+							// Speicher bereinigen
 
-							glVertexAttribPointer(INDEX_TEXTURE, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+							SOIL_free_image_data(pImg_data);
 
-							if(glGetError() == GL_NO_ERROR)
+							// Lege Texturkoordinaten fest
+
+							this->pTex_Pos = new Point[this->number_vertexes];
+
+							if(this->pTex_Pos != NULL)
 							{
-								glEnableVertexAttribArray(INDEX_TEXTURE); 
+								pTex_Pos[0].x = 0.0f;		pTex_Pos[0].y = 0.0f;		// BACK
+								pTex_Pos[1].x = 0.0f; 	pTex_Pos[1].y = 0.0f;
+								pTex_Pos[2].x = 0.0f;		pTex_Pos[2].y = 0.0f;
+								pTex_Pos[3].x = 0.0f; 	pTex_Pos[3].y = 0.0f;
+								pTex_Pos[4].x = 0.0f; 	pTex_Pos[4].y = 0.0f;
+								pTex_Pos[5].x = 0.0f; 	pTex_Pos[5].y = 0.0f;
 
-								if(glGetError() != GL_NO_ERROR)
-									{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
+								pTex_Pos[6].x = 0.0f;		pTex_Pos[6].y = 0.0f;		// LEFT
+								pTex_Pos[7].x = 0.0f; 	pTex_Pos[7].y = 0.0f;
+								pTex_Pos[8].x = 0.0f;		pTex_Pos[8].y = 0.0f;
+								pTex_Pos[9].x = 0.0f; 	pTex_Pos[9].y = 0.0f;
+								pTex_Pos[10].x = 0.0f; 	pTex_Pos[10].y = 0.0f;
+								pTex_Pos[11].x = 0.0f; 	pTex_Pos[11].y = 0.0f;
+
+								pTex_Pos[12].x = 0.0f;	pTex_Pos[12].y = 0.0f;	// FLOOR
+								pTex_Pos[13].x = 0.0f; 	pTex_Pos[13].y = 0.0f;
+								pTex_Pos[14].x = 0.0f;	pTex_Pos[14].y = 0.0f;
+								pTex_Pos[15].x = 0.0f; 	pTex_Pos[15].y = 0.0f;
+								pTex_Pos[16].x = 0.0f; 	pTex_Pos[16].y = 0.0f;
+								pTex_Pos[17].x = 0.0f; 	pTex_Pos[17].y = 0.0f;
+
+								pTex_Pos[18].x = 0.0f;	pTex_Pos[18].y = 0.0f;	// RIGHT
+								pTex_Pos[19].x = 0.0f; 	pTex_Pos[19].y = 0.0f;
+								pTex_Pos[20].x = 0.0f;	pTex_Pos[20].y = 0.0f;
+								pTex_Pos[21].x = 0.0f; 	pTex_Pos[21].y = 0.0f;
+								pTex_Pos[22].x = 0.0f; 	pTex_Pos[22].y = 0.0f;
+								pTex_Pos[23].x = 0.0f; 	pTex_Pos[23].y = 0.0f;
+
+								pTex_Pos[24].x = 1.0f;	pTex_Pos[24].y = 0.0f;	// FRONT
+								pTex_Pos[25].x = 0.0f; 	pTex_Pos[25].y = 0.0f;
+								pTex_Pos[26].x = 0.0f;	pTex_Pos[26].y = 1.0f;
+								pTex_Pos[27].x = 0.0f; 	pTex_Pos[27].y = 1.0f;
+								pTex_Pos[28].x = 1.0f; 	pTex_Pos[28].y = 1.0f;
+								pTex_Pos[29].x = 1.0f; 	pTex_Pos[29].y = 0.0f;
+
+								pTex_Pos[30].x = 0.0f;	pTex_Pos[30].y = 0.0f;	// TOP
+								pTex_Pos[31].x = 0.0f; 	pTex_Pos[31].y = 0.0f;
+								pTex_Pos[32].x = 0.0f;	pTex_Pos[32].y = 0.0f;
+								pTex_Pos[33].x = 0.0f; 	pTex_Pos[33].y = 0.0f;
+								pTex_Pos[34].x = 0.0f; 	pTex_Pos[34].y = 0.0f;
+								pTex_Pos[35].x = 0.0f; 	pTex_Pos[35].y = 0.0f;
+
+								glVertexAttribPointer(INDEX_TEXTURE, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+								if(glGetError() == GL_NO_ERROR)
+								{
+									glEnableVertexAttribArray(INDEX_TEXTURE); 
+
+									if(glGetError() != GL_NO_ERROR)
+										{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
+								}
+								else
+									{exit_code = ERR_EN_MDL_VAO_P;}
 							}
 							else
-								{exit_code = ERR_EN_MDL_VAO_P;}
-						}
+								{exit_code = ERR_EN_MEM_TEXTURE;}
+						}	
 						else
-							{exit_code = ERR_EN_MEM_TEXTURE;}
-					}	
+							{exit_code = ERR_EN_MIPMAP_TEXTURE;}
+					}
 					else
-						{exit_code = ERR_EN_MIPMAP_TEXTURE;}
+						{exit_code = ERR_EN_PAR_TEXTURE;}
 				}
 				else
 					{exit_code = ERR_EN_GL_TEXTURE;}

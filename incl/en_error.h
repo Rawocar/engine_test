@@ -42,5 +42,6 @@
 #define ERR_EN_GL_TEXTURE										-32								// glBindTexture ist fehlgeschlagen
 #define ERR_EN_MIPMAP_TEXTURE								-33								// glBindTexture ist fehlgeschlagen
 #define ERR_EN_MEM_TEXTURE									-34								// es konnte kein Speicher für Texture Mapping reserviert werden
+#define ERR_EN_PAR_TEXTURE									-35								// glTexParameteri ist fehlgeschlagen
 
 #endif

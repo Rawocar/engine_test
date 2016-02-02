@@ -24,10 +24,10 @@
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 
-#define NUMBER_VBO		2
-#define INDEX_POS			1
-#define INDEX_COLOR		2
-#define INDEX_TEXTURE	3
+#define NUMBER_VBO		3
+#define INDEX_POS			0
+#define INDEX_COLOR		1
+#define INDEX_TEXTURE	2
 #define CUBE_VERT			36
 
 ///////////////////////////////////////////
@@ -59,7 +59,7 @@ class CModel_3D
 		unsigned int id_vao;									// die ID des VAO
 		VEC4 * pCol_Vertex;										// die Farbe für jeden einzelnen Vertex
 		unsigned int current_col_ver;					// aktueller Vertex, der von den Farben her initialisiert wird
-		glm::mat4 mdl_pos;										// die Position des Models
+		glm::mat4 mdl;												// die Position des Models
 		unsigned int id_texture;							// ID der Textur
 		Point * pTex_Pos;											// Texture Mapping
 
@@ -106,9 +106,10 @@ class CModel_3D
 
 		/*
 			Beschreibung: 		Diese Funktion malt das Model.
+			1. Parameter:			Shader Programm ID
 		*/
 
-		void draw();
+		void draw(int);
 
 		/*
 			Beschreibung:			Gibt Position des Models zurück. Skalierung / Rotation
@@ -145,12 +146,12 @@ class CModel_3D
 		void rotate(float, glm::vec3);
 
 		/*
-			Beschreibung:			Diese Funktion legt eine Textur auf das Model. Diese Funktion muss nach crate_model aufgerufen werden.
+			Beschreibung:			Diese Funktion legt eine Textur auf einen Würfel. Diese Funktion kann nach crate_cube aufgerufen werden.
 			1. Parameter:			Texturpfad
 			return:						en_err
 		*/
 
-		int set_texture(const char*);
+		int set_texture_cube(const char*);
 };
 
 #endif

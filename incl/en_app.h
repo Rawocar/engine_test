@@ -81,6 +81,7 @@ class CApp
 		glm::vec3 camera_from_dir;				// Richtung, in die die Kamera zeigt
 		glm::vec3 camera_up;							// Up
 		glm::mat4 camera;									// die fertige Kamera
+		GLenum gl_err;										// Fehlercode OpenGL
 
 		/*
 			Beschreibung:			gibt Position des Model zurück.
@@ -282,12 +283,10 @@ class CApp
 		void init_camera();
 
 		/*
-			Beschreibung:			Diese Funktion bereitet Projektion eines Models anhand des
-												Indexes auf dem Bildschirm vor.
-			1. Parameter:			index
+			Beschreibung:			Diese Funktion bereitet die Projektion der Kamera vor.
 		*/
 
-		void proj_model(unsigned int);
+		void proj();
 
 		/*
 			Beschreibung:			Diese Funktion gibt poly_mode zurück.

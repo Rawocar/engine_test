@@ -17,7 +17,8 @@ poly_mode(POLY_MODE_FILL),
 en_error(ERR_EN_NO_ERROR),
 gm_error(0),
 debug_i(0),
-debug_size(0)
+debug_size(0),
+gl_err(GL_NO_ERROR)
 {
   this->pWindow = NULL;
 	this->pShaders = NULL;
@@ -218,15 +219,15 @@ int CApp::init_shader()
 
 		glLinkProgram(this->shader_program);
 						
-		if(glGetError() == GL_NO_ERROR)
+		if((gl_err = glGetError()) == GL_NO_ERROR)
 		{
 			#if EMODE == EDEBUG_MODE
 				this->write_log("<b>ENGINE:</b> glLinkProgram: OK", DB_MSG_OK);
 			#endif
 
 			glUseProgram(this->shader_program);
-
-			if(glGetError() == GL_NO_ERROR)
+			
+			if((gl_err = glGetError()) == GL_NO_ERROR)
 			{
 				#if EMODE == EDEBUG_MODE
 					this->write_log("<b>ENGINE:</b> glUseProgram: OK", DB_MSG_OK);
@@ -237,7 +238,7 @@ int CApp::init_shader()
 				exit_code = ERR_EN_USE_PROG;
 
 				#if EMODE == EDEBUG_MODE
-					sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+					sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end GL Flag: %d --end OpenGL Error: %s --end", gl_err, glewGetErrorString(gl_err));
 					this->write_log(pBuffer, DB_MSG_ERR);
 				#endif
 			}
@@ -247,7 +248,7 @@ int CApp::init_shader()
 			exit_code = ERR_EN_LINK_PROG;
 
 			#if EMODE == EDEBUG_MODE
-				sprintf(pBuffer, "<b>ENGINE:</b> glLinkProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+				sprintf(pBuffer, "<b>ENGINE:</b> glLinkProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(gl_err));
 				this->write_log(pBuffer, DB_MSG_ERR);
 			#endif
 		}
@@ -475,7 +476,7 @@ CModel_3D ** CApp::get_model_addr()
 
 void CApp::draw_model(unsigned int i)
 {
-  this->ppModel[i]->draw();
+  this->ppModel[i]->draw(this->shader_program);
 }
 
 //------------------------------------------------------------------------
@@ -506,9 +507,9 @@ void CApp::init_camera()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CApp::proj_model(unsigned int i)
+void CApp::proj()
 {
-  this->mvp = this->projection * this->camera * this->get_mdl_pos(i);
+  this->mvp = this->projection * this->camera;
 	int matrix_id = glGetUniformLocation(this->shader_program, "mvp");
 	glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mvp[0][0]));
 }
@@ -668,7 +669,7 @@ int CApp::init_engine(const char * pApp_name)
 
 						glEnable(GL_DEPTH_TEST);
 
-						if(glGetError() == GL_NO_ERROR)
+						if((gl_err = glGetError()) == GL_NO_ERROR)
 						{
 							#if EMODE == EDEBUG_MODE
 								this->write_log("<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) OK", DB_MSG_OK);
@@ -676,7 +677,7 @@ int CApp::init_engine(const char * pApp_name)
 
   	  	    	glDepthFunc(GL_LEQUAL);
 
-							if(glGetError() == GL_NO_ERROR)
+							if((gl_err = glGetError()) == GL_NO_ERROR)
 							{
 								#if EMODE == EDEBUG_MODE
 									this->write_log("<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) OK", DB_MSG_OK);
@@ -691,7 +692,7 @@ int CApp::init_engine(const char * pApp_name)
 								exit_code = ERR_EN_DEPTH_FUNC;
 
 								#if EMODE == EDEBUG_MODE
-									sprintf(pBuffer, "<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+									sprintf(pBuffer, "<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(gl_err));
 									this->write_log(pBuffer, DB_MSG_ERR);
 								#endif
 							}
@@ -701,7 +702,7 @@ int CApp::init_engine(const char * pApp_name)
 							exit_code = ERR_EN_DEPTH_TEST;
 
 							#if EMODE == EDEBUG_MODE
-								sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+								sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(gl_err));
 								this->write_log(pBuffer, DB_MSG_ERR);
 							#endif
 						}

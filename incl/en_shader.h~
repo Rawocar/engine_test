@@ -11,6 +11,8 @@
 #include <GL/glew.h>
 #include <string.h>
 
+#include "en_error.h"
+#include "en_app.h"
 #include "en_file.h"
 
 ///////////////////////////////////////////
@@ -24,10 +26,11 @@
 										zurück.
 	1. Parameter:			Dateipfad
 	2. Parameter:			Die Art des Shader
+	3. Parameter:			Programmvariable
 	return:						Shader ID
 */
 
-int load_shader(const char*, GLenum);
+int load_shader(const char*, GLenum, CApp*);
 
 /*
 	Beschreibung:			Diese Funktion entlädt das Shader Programm.
