@@ -7,6 +7,10 @@ int CApp::load_shader(const char * pFile, GLenum shader_spec)
   char * pSrc = new char[len + 1];
 	const char * pCSrc = (const char*)pSrc;
   int exit_code = ERR_EN_NO_ERROR;
+	int param = 0;
+	const unsigned short int SIZE_LOG = 400 + 1;
+	char compile_log[SIZE_LOG];
+	int length_log = 0;
 
 	#if EMODE == EDEBUG_MODE
 		char * pBuffer = NULL;
@@ -50,22 +54,47 @@ int CApp::load_shader(const char * pFile, GLenum shader_spec)
 
 				if(glGetError() == GL_NO_ERROR)
 				{
-					#if EMODE == EDEBUG_MODE
-						this->write_log("<b>ENGINE:</b> glCompileShader: OK", DB_MSG_OK);
-					#endif
+					// Test Kompilierung
 
-					glAttachShader(this->shader_program, id);
+					glGetShaderiv(id, GL_COMPILE_STATUS, &param);
 
-					if(glGetError() == GL_NO_ERROR)
+					if((gl_err = glGetError()) == GL_NO_ERROR)
 					{
-						#if EMODE == EDEBUG_MODE
-							this->write_log("<b>ENGINE:</b> glAttachShader: OK", DB_MSG_OK);
-						#endif
-					}
+						if(param == GL_TRUE)
+						{
+							#if EMODE == EDEBUG_MODE
+								this->write_log("<b>ENGINE:</b> glCompileShader: OK", DB_MSG_OK);
+							#endif
+
+							glAttachShader(this->shader_program, id);
+
+							if(glGetError() == GL_NO_ERROR)
+							{
+								#if EMODE == EDEBUG_MODE
+									this->write_log("<b>ENGINE:</b> glAttachShader: OK", DB_MSG_OK);
+								#endif
+							}
+							else
+							{
+								#if EMODE == EDEBUG_MODE
+									sprintf(pBuffer, "<b>ENGINE:</b> glAttachShader: OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+									this->write_log(pBuffer, DB_MSG_ERR);
+								#endif
+							}
+            }
+						else
+						{
+							#if EMODE == EDEBUG_MODE
+								glGetShaderInfoLog(id, SIZE_LOG, &length_log, compile_log);
+								sprintf(pBuffer, "<b>ENGINE:</b> failed to compile \"%s\" shader: %s --end", pFile, compile_log);
+								this->write_log(pBuffer, DB_MSG_ERR);
+							#endif
+						}
+          }
 					else
 					{
 						#if EMODE == EDEBUG_MODE
-							sprintf(pBuffer, "<b>ENGINE:</b> glAttachShader: OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+							sprintf(pBuffer, "<b>ENGINE:</b> glGetShaderiv: OpenGL Error: %s --end", glewGetErrorString(gl_err));
 							this->write_log(pBuffer, DB_MSG_ERR);
 						#endif
 					}
