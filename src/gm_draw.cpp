@@ -6,7 +6,7 @@ int gm_draw(CApp * pApp, Game_State * pstate)
 
   // Background
 
-  glClearColor(0.0, 0.0, 0.11, 1.0);
+  glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	// Kamera
@@ -21,8 +21,14 @@ int gm_draw(CApp * pApp, Game_State * pstate)
 		{
 			pApp->draw_model(0);
 			pApp->draw_model(1);
+			pApp->draw_model(2);
+			pApp->draw_model(3);
 		} break;
 		case quit:
+		{
+
+		} break;
+		case end:
 		{
 
 		} break;

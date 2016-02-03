@@ -223,11 +223,11 @@ int CApp::init_shader()
 
 		glLinkProgram(this->shader_program);
 						
-		if((gl_err = glGetError()) == GL_NO_ERROR)
+		if((this->gl_err = glGetError()) == GL_NO_ERROR)
 		{
 			glGetProgramiv(this->shader_program, GL_LINK_STATUS, &param);
 		
-			if((gl_err = glGetError()) == GL_NO_ERROR)
+			if((this->gl_err = glGetError()) == GL_NO_ERROR)
 			{
 				if(param == GL_TRUE)
 				{
@@ -237,7 +237,7 @@ int CApp::init_shader()
 
 					glUseProgram(this->shader_program);
 			
-					if((gl_err = glGetError()) == GL_NO_ERROR)
+					if((this->gl_err = glGetError()) == GL_NO_ERROR)
 					{
 						#if EMODE == EDEBUG_MODE
 							this->write_log("<b>ENGINE:</b> glUseProgram: OK", DB_MSG_OK);
@@ -248,7 +248,7 @@ int CApp::init_shader()
 						exit_code = ERR_EN_USE_PROG;
 
 						#if EMODE == EDEBUG_MODE
-							sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end GL Flag: %d --end OpenGL Error: %s --end", gl_err, glewGetErrorString(gl_err));
+							sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end GL Flag: %d --end OpenGL Error: %s --end", this->gl_err, glewGetErrorString(this->gl_err));
 							this->write_log(pBuffer, DB_MSG_ERR);
 						#endif
 					}
@@ -617,7 +617,7 @@ void CApp::create_log()
 
   if(pFile != NULL)
 	{
-		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px; margin: 0px;\">Window: %dpx * %dpx</h2><h3 style=\"font-size: 14px;\">GL Version: %s</h3><h4 style=\"font-size: 14px;\">GLSL Version: %s</h4><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION), this->pDebug_Str);
+		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px; margin: 0px;\">Window: %dpx * %dpx</h2><h3 style=\"font-size: 14px; margin: 0px;\">GL Version: %s</h3><h4 style=\"font-size: 14px; margin: 0px;\">GLSL Version: %s</h4><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION), this->pDebug_Str);
 		fclose(pFile);
 	}
 }

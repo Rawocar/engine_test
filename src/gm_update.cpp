@@ -18,12 +18,18 @@ int gm_update(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 
 			pApp->rotate(0, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
 			pApp->rotate(1, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
+			pApp->rotate(2, (pApp->cpu_get_timestep() * -0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
 		} break;
 		case quit:
 		{
 			// Shader entladen
 
 			pApp->unload_shader();
+			*pstate = end;
+		} break;
+		case end:
+		{
+
 		} break;
 	};
 

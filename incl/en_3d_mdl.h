@@ -28,6 +28,7 @@
 #define INDEX_POS			0
 #define INDEX_COLOR		1
 #define INDEX_TEXTURE	2
+#define SQUARE_VERT		4
 #define CUBE_VERT			36
 
 ///////////////////////////////////////////
@@ -62,6 +63,8 @@ class CModel_3D
 		glm::mat4 mdl;												// die Position des Models
 		unsigned int id_texture;							// ID der Textur
 		Point * pTex_Pos;											// Texture Mapping
+		bool texture_set;											// sagt aus, ob eine Textur gesetzt wurde
+		GLenum draw_mode;											// sagt aus, wie OpenGL zeichnen soll, standard auf GL_TRIANGLES
 
 	public:
 
@@ -132,10 +135,11 @@ class CModel_3D
 			1. Parameter:			Spannweite in eine Dimension
 			2. Parameter:			rot wert (0 - 255)
 			3. Parameter:			grün wert (0 - 255)
-			4. Parameter:			blau wert (0 . 255)
+			4. Parameter:			blau wert (0 - 255)
+			5. Parameter:			alpha wert (0 - 255)
 		*/
 
-		void create_cube(float, uint8_t, uint8_t, uint8_t);
+		void create_cube(float, uint8_t, uint8_t, uint8_t, uint8_t);
 
 		/*
 			Beschreibung:			Diese Funktion rotiert ein Model.
@@ -146,12 +150,30 @@ class CModel_3D
 		void rotate(float, glm::vec3);
 
 		/*
-			Beschreibung:			Diese Funktion legt eine Textur auf einen Würfel. Diese Funktion kann nach crate_cube aufgerufen werden.
+			Beschreibung:			Diese Funktion legt eine Textur auf einen Würfel. Diese Funktion kann nach create_cube aufgerufen werden.
 			1. Parameter:			Texturpfad
 			return:						en_err
 		*/
 
 		int set_texture_cube(const char*);
+
+		/*
+			Beschreibung:			Diese Funktion erzeugt ein 2D Quadrat.
+			1. Parameter:			Spannweite in eine Dimension.
+			2. Parameter:			rot wert (0 - 255)
+			3. Parameter:			grün wert (0 - 255)
+			4. Parameter:			blau wert (0 - 255)
+		*/
+
+		void create_square(float, uint8_t, uint8_t, uint8_t);
+
+		/*
+			Beschreibung:			Diese Funktion legt eine Textur auf ein Quadrat. Diese Funktion kann nach create_square aufgerufen werden.
+			1. Parameter:			Texturpfad
+			return:						en_err
+		*/
+
+		int set_texture_square(const char*);
 };
 
 #endif

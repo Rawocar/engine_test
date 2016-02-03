@@ -10,7 +10,8 @@
 typedef enum GState
 {
   load_menu,
-	quit
+	quit,
+	end
 } Game_State; 
 
 #endif
