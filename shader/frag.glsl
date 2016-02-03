@@ -4,12 +4,15 @@
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 
-varying vec4 in_color;				// in
-varying vec2 in_uv; 					// in
+#version 130
 
-uniform sampler2D tex;				// texture
+varying vec4 _color;				// in
+varying vec2 _uv; 					// in
+
+uniform sampler2D tex;			// texture
+out vec4 color;
 
 void main(void)
 {
-	gl_FragColor = texture2D(tex, in_uv);
+	color = texture(tex, _uv)/* + vec4(_color)*/;
 }

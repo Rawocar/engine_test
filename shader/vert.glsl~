@@ -4,12 +4,14 @@
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 
+#version 130
+
 attribute vec3 in_pos;		// in
 attribute vec4 in_color;	// in
 attribute vec2 in_uv;
 
-varying vec4 out_color;					// out
-varying vec2 out_uv;						// out
+varying vec4 _color;			// out
+varying vec2 _uv;					// out
 uniform mat4 mvp;
 uniform mat4 model;
 
@@ -22,5 +24,5 @@ void main(void)
 	// übergibt die Eingabefarbe
 
   out_color = in_color;
-	out_vu = in_vu;
+	out_uv = in_uv;
 }
