@@ -22,25 +22,8 @@
 ///////////////////////////////////////////
 
 /*
-  Beschreibung:			Diese Funktion erstellt das Fenster und
-										initialisiert OpenGL.
-  1. Parameter:			Zeiger auf Programmvariable
-	return:						gm_err / en_err
-*/
-
-int init(CApp*);
-
-/*
-	Beschreibung:			Diese Funktion erstellt das Shader Programm.
-  1. Parameter:			Zeiger auf Programmvariable
-  return:						gm_err / en_err
-*/
-
-int init_shader(CApp*);
-
-/*
 	Beschreibung:			Diese Funktion initialisiert alle Models fürs Hauptmenü.
-	1. Parameter:			Modelzeiger
+	1. Parameter:			Programmvariables
 	return:						gm_err / en_err
 */
 

@@ -82,6 +82,7 @@ class CApp
 		glm::vec3 camera_up;							// Up
 		glm::mat4 camera;									// die fertige Kamera
 		GLenum gl_err;										// Fehlercode OpenGL
+		unsigned int log_bytes;						// Anzahl an Bytes, die tatsächlich reingeschrieben wurden
 
 		/*
 			Beschreibung:			gibt Position des Model zurück.

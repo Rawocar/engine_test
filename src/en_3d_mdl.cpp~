@@ -644,6 +644,18 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
         }
 
 				// SPÄTER ANDERE DATEN
+
+				for(unsigned int i = 0 ; i < this->number_vertexes ; i++)
+					{this->add_vertex_col(1.0f, 1.0f, 1.0f, 1.0f);}
+
+				// alle Daten geladen, schließe Datei
+
+				fclose(pFile);
+
+				// erstelle Model
+
+				this->draw_mode = GL_TRIANGLES;
+				exit_code = this->create_model();
 			}	
 		}
 		else
@@ -653,4 +665,12 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 		{exit_code = ERR_EN_FOPEN;}
 
   return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+unsigned int CModel_3D::get_num_vertexes()
+{
+	return this->number_vertexes;
 }

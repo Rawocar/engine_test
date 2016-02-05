@@ -182,6 +182,13 @@ class CModel_3D
 		*/
 
 		int load_mdl_from_obj(const char*);
+
+		/*
+			Beschreibung:			Gibt die Anzahl an Vertexes zurück.
+			return:						Anzahl an Vertexes
+		*/
+
+		unsigned int get_num_vertexes();
 };
 
 #endif

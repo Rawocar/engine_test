@@ -18,7 +18,8 @@ en_error(ERR_EN_NO_ERROR),
 gm_error(0),
 debug_i(0),
 debug_size(0),
-gl_err(GL_NO_ERROR)
+gl_err(GL_NO_ERROR),
+log_bytes(0)
 {
   this->pWindow = NULL;
 	this->pShaders = NULL;
@@ -578,6 +579,8 @@ void CApp::write_log(const char * pStr, short int flag)
 
   if((this->debug_i + len) < (this->debug_size - 1))
 	{
+		this->log_bytes += len;
+
     strcat(this->pDebug_Str, pTr);
 
 		if(flag == DB_MSG_HL)
@@ -617,7 +620,7 @@ void CApp::create_log()
 
   if(pFile != NULL)
 	{
-		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px; margin: 0px;\">Window: %dpx * %dpx</h2><h3 style=\"font-size: 14px; margin: 0px;\">GL Version: %s</h3><h4 style=\"font-size: 14px; margin: 0px;\">GLSL Version: %s</h4><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION), this->pDebug_Str);
+		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px; margin: 0px;\">Window: %dpx * %dpx</h2><h3 style=\"font-size: 14px; margin: 0px;\">GL Version: %s</h3><h4 style=\"font-size: 14px; margin: 0px;\">GLSL Version: %s</h4><h5 style=\"font-size: 14px; margin: 0px;\">Zeichen: %u</h5><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION), this->log_bytes, this->pDebug_Str);
 		fclose(pFile);
 	}
 }

@@ -3,9 +3,14 @@
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-int init_models_menu(CModel_3D ** ppModel)
+int init_models_menu(CApp * pApp)
 {
 	int exit_code = ERR_GM_NO_ERROR;
+	CModel_3D ** ppModel = pApp->get_mdl_addr();
+
+	#if MODE == DEBUG_MODE
+		pApp->write_log("init_models_menu()", DB_MSG_HL);
+	#endif
 
   // Würfel
 
@@ -22,7 +27,8 @@ int init_models_menu(CModel_3D ** ppModel)
 	ppModel[3]->set_texture_square("textures/default.bmp");
 	ppModel[3]->set_mdl_pos(0.0f, 1.0f, -1.0f);
 
-	ppModel[4]->load_mdl_from_obj("models/Stormtrooper.obj");
+	exit_code = ppModel[4]->load_mdl_from_obj("models/Stormtrooper.obj");
+  ppModel[4]->set_mdl_pos(0.0f, 0.0f, 0.0f);
 
 	return exit_code;
 }

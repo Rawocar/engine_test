@@ -23,10 +23,10 @@
 
 /*
 	Beschreibung:			Diese Funktion initialisiert alle Models fürs Hauptmenü.
-	1. Parameter:			Modelzeiger
+	1. Parameter:			Programmvariables
 	return:						gm_err / en_err
 */
 
-int init_models_menu(CModel_3D**);
+int init_models_menu(CApp*);
 
 #endif
