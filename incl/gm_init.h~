@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include "gm_error.h"
 #include "en_app.h"
 #include "en_shader.h"
 #include "en_3d_mdl.h"
@@ -24,7 +25,7 @@
   Beschreibung:			Diese Funktion erstellt das Fenster und
 										initialisiert OpenGL.
   1. Parameter:			Zeiger auf Programmvariable
-	return:						errno
+	return:						gm_err / en_err
 */
 
 int init(CApp*);
@@ -32,15 +33,17 @@ int init(CApp*);
 /*
 	Beschreibung:			Diese Funktion erstellt das Shader Programm.
   1. Parameter:			Zeiger auf Programmvariable
-  return:						errno
+  return:						gm_err / en_err
 */
 
 int init_shader(CApp*);
 
 /*
 	Beschreibung:			Diese Funktion initialisiert alle Models fürs Hauptmenü.
+	1. Parameter:			Modelzeiger
+	return:						gm_err / en_err
 */
 
-void init_models_menu(CModel_3D*);
+int init_models_menu(CModel_3D**);
 
 #endif

@@ -24,9 +24,9 @@
 /*
 	Beschreibung:			Diese Funktion malt das aktuelle Bild.
 	1. Parameter:			Zeiger auf Programmvariable
-	return:						errno
+	return:						gm_err
 */
 
-int gm_draw(CApp*);
+int gm_draw(CApp*, Game_State*);
 
 #endif

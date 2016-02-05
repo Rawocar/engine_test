@@ -17,6 +17,7 @@
 #include "gm_init.h"
 #include "gm_draw.h"
 #include "gm_update.h"
+#include "gm_state.h"
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -25,8 +26,8 @@
 ///////////////////////////////////////////
 
 /*
-  Beschreibung:			Diese Funktion bildet die Programmschleife im Releasmodus.
-  return:						errno
+  Beschreibung:			Diese Funktion bildet die Programmschleife im Releasemodus.
+  return:						gm_err
 */
 
 int run();

@@ -17,7 +17,8 @@ poly_mode(POLY_MODE_FILL),
 en_error(ERR_EN_NO_ERROR),
 gm_error(0),
 debug_i(0),
-debug_size(0)
+debug_size(0),
+gl_err(GL_NO_ERROR)
 {
   this->pWindow = NULL;
 	this->pShaders = NULL;
@@ -189,6 +190,10 @@ int CApp::check_ogl_attributes()
 int CApp::init_shader()
 {
 	int exit_code = ERR_EN_NO_ERROR;
+  int param = 0;
+	int length_log = 0;
+	const unsigned short int SIZE_LOG = 400 + 1;
+	char compile_log[SIZE_LOG];
 
 	#if EMODE == EDEBUG_MODE
 		char * pBuffer = NULL;
@@ -218,26 +223,53 @@ int CApp::init_shader()
 
 		glLinkProgram(this->shader_program);
 						
-		if(glGetError() == GL_NO_ERROR)
+		if((this->gl_err = glGetError()) == GL_NO_ERROR)
 		{
-			#if EMODE == EDEBUG_MODE
-				this->write_log("<b>ENGINE:</b> glLinkProgram: OK", DB_MSG_OK);
-			#endif
-
-			glUseProgram(this->shader_program);
-
-			if(glGetError() == GL_NO_ERROR)
+			glGetProgramiv(this->shader_program, GL_LINK_STATUS, &param);
+		
+			if((this->gl_err = glGetError()) == GL_NO_ERROR)
 			{
-				#if EMODE == EDEBUG_MODE
-					this->write_log("<b>ENGINE:</b> glUseProgram: OK", DB_MSG_OK);
-				#endif
-			}
+				if(param == GL_TRUE)
+				{
+					#if EMODE == EDEBUG_MODE
+						this->write_log("<b>ENGINE:</b> glLinkProgram: OK", DB_MSG_OK);
+					#endif
+
+					glUseProgram(this->shader_program);
+			
+					if((this->gl_err = glGetError()) == GL_NO_ERROR)
+					{
+						#if EMODE == EDEBUG_MODE
+							this->write_log("<b>ENGINE:</b> glUseProgram: OK", DB_MSG_OK);
+						#endif
+					}
+					else
+					{
+						exit_code = ERR_EN_USE_PROG;
+
+						#if EMODE == EDEBUG_MODE
+							sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end GL Flag: %d --end OpenGL Error: %s --end", this->gl_err, glewGetErrorString(this->gl_err));
+							this->write_log(pBuffer, DB_MSG_ERR);
+						#endif
+					}
+        }
+				else
+				{
+					exit_code = ERR_EN_LINK_PROG;
+
+					#if EMODE == EDEBUG_MODE
+						glGetProgramInfoLog(this->shader_program, SIZE_LOG, &length_log, compile_log);
+						sprintf(pBuffer, "<b>ENGINE:</b> failed to link shader program: %s --end", compile_log);
+						this->write_log(pBuffer, DB_MSG_ERR);
+					#endif
+				}
+      }
 			else
 			{
-				exit_code = ERR_EN_USE_PROG;
+				exit_code = ERR_EN_CHECKLINK_PROG;
 
 				#if EMODE == EDEBUG_MODE
-					sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+					sprintf(pBuffer, "<b>ENGINE:</b> glGetProgramiv() failed --end GL Flag: %d --end OpenGL Error: %s --end", this->gl_err, glewGetErrorString(this->gl_err));
 					this->write_log(pBuffer, DB_MSG_ERR);
 				#endif
 			}
@@ -247,7 +279,7 @@ int CApp::init_shader()
 			exit_code = ERR_EN_LINK_PROG;
 
 			#if EMODE == EDEBUG_MODE
-				sprintf(pBuffer, "<b>ENGINE:</b> glLinkProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+				sprintf(pBuffer, "<b>ENGINE:</b> glLinkProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(this->gl_err));
 				this->write_log(pBuffer, DB_MSG_ERR);
 			#endif
 		}
@@ -475,7 +507,7 @@ CModel_3D ** CApp::get_model_addr()
 
 void CApp::draw_model(unsigned int i)
 {
-  this->ppModel[i]->draw();
+  this->ppModel[i]->draw(this->shader_program);
 }
 
 //------------------------------------------------------------------------
@@ -506,9 +538,9 @@ void CApp::init_camera()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CApp::proj_model(unsigned int i)
+void CApp::proj()
 {
-  this->mvp = this->projection * this->camera * this->get_mdl_pos(i);
+  this->mvp = this->projection * this->camera;
 	int matrix_id = glGetUniformLocation(this->shader_program, "mvp");
 	glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mvp[0][0]));
 }
@@ -585,7 +617,7 @@ void CApp::create_log()
 
   if(pFile != NULL)
 	{
-		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px;\">Window: %dpx * %dpx</h2><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, this->pDebug_Str);
+		fprintf(pFile, "<html><head><title>DEBUG File</title><style>hr{border-bottom: 0px; border-top: 1px solid black;}</style></head><body><h1 style=\"font-size: 16px;\">Debug File - %s</h1><h2 style=\"font-size: 14px; margin: 0px;\">Window: %dpx * %dpx</h2><h3 style=\"font-size: 14px; margin: 0px;\">GL Version: %s</h3><h4 style=\"font-size: 14px; margin: 0px;\">GLSL Version: %s</h4><table style=\"width: 450px; font-size: 10px;\">%s</table></body></html>", asctime(ts), width, height, glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION), this->pDebug_Str);
 		fclose(pFile);
 	}
 }
@@ -668,7 +700,7 @@ int CApp::init_engine(const char * pApp_name)
 
 						glEnable(GL_DEPTH_TEST);
 
-						if(glGetError() == GL_NO_ERROR)
+						if((this->gl_err = glGetError()) == GL_NO_ERROR)
 						{
 							#if EMODE == EDEBUG_MODE
 								this->write_log("<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) OK", DB_MSG_OK);
@@ -676,7 +708,7 @@ int CApp::init_engine(const char * pApp_name)
 
   	  	    	glDepthFunc(GL_LEQUAL);
 
-							if(glGetError() == GL_NO_ERROR)
+							if((this->gl_err = glGetError()) == GL_NO_ERROR)
 							{
 								#if EMODE == EDEBUG_MODE
 									this->write_log("<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) OK", DB_MSG_OK);
@@ -691,7 +723,7 @@ int CApp::init_engine(const char * pApp_name)
 								exit_code = ERR_EN_DEPTH_FUNC;
 
 								#if EMODE == EDEBUG_MODE
-									sprintf(pBuffer, "<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+									sprintf(pBuffer, "<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(this->gl_err));
 									this->write_log(pBuffer, DB_MSG_ERR);
 								#endif
 							}
@@ -701,7 +733,7 @@ int CApp::init_engine(const char * pApp_name)
 							exit_code = ERR_EN_DEPTH_TEST;
 
 							#if EMODE == EDEBUG_MODE
-								sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(glGetError()));
+								sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_DEPTH_TEST) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(this->gl_err));
 								this->write_log(pBuffer, DB_MSG_ERR);
 							#endif
 						}

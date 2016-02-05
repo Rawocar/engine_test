@@ -2,7 +2,7 @@
 
 int read_file(const char * pFile, char * pBuffer, unsigned int length)
 {
-	int exit_code = EXIT_SUCCESS;
+	int exit_code = ERR_EN_NO_ERROR;
   unsigned char c = '\0';
 
 	// Datei öffnen
@@ -28,7 +28,7 @@ int read_file(const char * pFile, char * pBuffer, unsigned int length)
 		fclose(pHandle);
 	}
   else
-		{exit_code = EIO;}
+	  {exit_code = ERR_EN_FOPEN;}
  
   return exit_code;
 }

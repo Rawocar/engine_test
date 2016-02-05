@@ -14,7 +14,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "SOIL/SOIL.h"
-
+#include <stdio.h>
 #include "en_error.h"
 #include "en_math.h"
 
@@ -28,6 +28,7 @@
 #define INDEX_POS			0
 #define INDEX_COLOR		1
 #define INDEX_TEXTURE	2
+#define SQUARE_VERT		4
 #define CUBE_VERT			36
 
 ///////////////////////////////////////////
@@ -59,9 +60,11 @@ class CModel_3D
 		unsigned int id_vao;									// die ID des VAO
 		VEC4 * pCol_Vertex;										// die Farbe für jeden einzelnen Vertex
 		unsigned int current_col_ver;					// aktueller Vertex, der von den Farben her initialisiert wird
-		glm::mat4 mdl_pos;										// die Position des Models
+		glm::mat4 mdl;												// die Position des Models
 		unsigned int id_texture;							// ID der Textur
 		Point * pTex_Pos;											// Texture Mapping
+		bool texture_set;											// sagt aus, ob eine Textur gesetzt wurde
+		GLenum draw_mode;											// sagt aus, wie OpenGL zeichnen soll, standard auf GL_TRIANGLES
 
 	public:
 
@@ -106,9 +109,10 @@ class CModel_3D
 
 		/*
 			Beschreibung: 		Diese Funktion malt das Model.
+			1. Parameter:			Shader Programm ID
 		*/
 
-		void draw();
+		void draw(int);
 
 		/*
 			Beschreibung:			Gibt Position des Models zurück. Skalierung / Rotation
@@ -131,10 +135,11 @@ class CModel_3D
 			1. Parameter:			Spannweite in eine Dimension
 			2. Parameter:			rot wert (0 - 255)
 			3. Parameter:			grün wert (0 - 255)
-			4. Parameter:			blau wert (0 . 255)
+			4. Parameter:			blau wert (0 - 255)
+			5. Parameter:			alpha wert (0 - 255)
 		*/
 
-		void create_cube(float, uint8_t, uint8_t, uint8_t);
+		void create_cube(float, uint8_t, uint8_t, uint8_t, uint8_t);
 
 		/*
 			Beschreibung:			Diese Funktion rotiert ein Model.
@@ -145,12 +150,38 @@ class CModel_3D
 		void rotate(float, glm::vec3);
 
 		/*
-			Beschreibung:			Diese Funktion legt eine Textur auf das Model. Diese Funktion muss nach crate_model aufgerufen werden.
+			Beschreibung:			Diese Funktion legt eine Textur auf einen Würfel. Diese Funktion kann nach create_cube aufgerufen werden.
 			1. Parameter:			Texturpfad
 			return:						en_err
 		*/
 
-		int set_texture(const char*);
+		int set_texture_cube(const char*);
+
+		/*
+			Beschreibung:			Diese Funktion erzeugt ein 2D Quadrat.
+			1. Parameter:			Spannweite in eine Dimension.
+			2. Parameter:			rot wert (0 - 255)
+			3. Parameter:			grün wert (0 - 255)
+			4. Parameter:			blau wert (0 - 255)
+		*/
+
+		void create_square(float, uint8_t, uint8_t, uint8_t);
+
+		/*
+			Beschreibung:			Diese Funktion legt eine Textur auf ein Quadrat. Diese Funktion kann nach create_square aufgerufen werden.
+			1. Parameter:			Texturpfad
+			return:						en_err
+		*/
+
+		int set_texture_square(const char*);
+
+		/*
+			Beschreibung:			Diese Funktion lädt ein Model aus einer .obj Datei.
+			1. Parameter:			Pfad der Datei
+			return:						en_err
+		*/
+
+		int load_mdl_from_obj(const char*);
 };
 
 #endif

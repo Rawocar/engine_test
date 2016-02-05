@@ -63,8 +63,6 @@ class CApp
 		SDL_Window * pWindow;							// Das SDL Fenster
 		SDL_Event event;									// Das SDL Event
 		SDL_GLContext context;						// Der Open GL Renderer
-		unsigned int * pVBO;							// hier werden die ID's der VBO gespeichert, 0 = Positionen, 1 = Farben
-		unsigned int id_vao;							// die ID des VAO
 		CPU cpu;													// Das CPU Messgerät
 		int shader_program;								// ID des Shader Programm
     int * pShaders;										// IDs der Shader, Vertex-S, Fragment-S
@@ -284,12 +282,10 @@ class CApp
 		void init_camera();
 
 		/*
-			Beschreibung:			Diese Funktion bereitet Projektion eines Models anhand des
-												Indexes auf dem Bildschirm vor.
-			1. Parameter:			index
+			Beschreibung:			Diese Funktion bereitet die Projektion der Kamera vor.
 		*/
 
-		void proj_model(unsigned int);
+		void proj();
 
 		/*
 			Beschreibung:			Diese Funktion gibt poly_mode zurück.
@@ -359,10 +355,6 @@ class CApp
 		*/
 
 		void set_camera_pos(glm::vec3);
-
-		/*
-			Beschreibung:			Diese Funktion gibt die vao_id zurück.
-		*/
 };
 
 #endif

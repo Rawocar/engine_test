@@ -1,12 +1,16 @@
 #include "../incl/gm_event.h"
 
-void event_handler(SDL_Event event, Game_State * pstate, unsigned short int * ppoly_mode)
+void event_handler(SDL_Event event, Game_State * pstate, unsigned short int * ppoly_mode, CApp * pApp)
 {
   switch(event.type)
 	{
 		case SDL_KEYDOWN:
 		{
 			event_kd(event, pstate, ppoly_mode);
+		} break;
+		case SDL_MOUSEWHEEL:
+		{
+      event_mw(event, pApp);
 		} break;
 		default:
 		{
@@ -58,10 +62,19 @@ void esc_kd(Game_State * pstate)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
+void event_mw(SDL_Event event, CApp * pApp)
+{
+	// Kamera zoom
+
+	zoom_camera(event, pApp);
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
 void p_kd(unsigned short int * ppoly_mode)
 {
   *ppoly_mode = (*ppoly_mode + 1) % 3;
-  //printf("%u\n", poly_mode);
 
   switch(*ppoly_mode)
   {
@@ -78,4 +91,30 @@ void p_kd(unsigned short int * ppoly_mode)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 		} break;
 	};
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void zoom_camera(SDL_Event event, CApp * pApp)
+{
+  glm::vec3 camera_pos = pApp->get_camera_pos();
+	float factor_inc = 1.05f;
+	float factor_dec = 0.95f;
+
+	// heraus zoomen bix max .z = 6.0f
+
+	if(event.wheel.y < 0)
+	{
+    if(camera_pos.z * factor_inc < 6.0f)
+			{pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_inc, camera_pos.z * factor_inc));}
+	}
+
+	// heran zoomen bis max .z = 3.0f
+
+	if(event.wheel.y > 0)
+	{
+		if(camera_pos.z * factor_dec > 3.0f)
+			{pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_dec, camera_pos.z * factor_dec));}
+	}
 }

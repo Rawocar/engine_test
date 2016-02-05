@@ -26,9 +26,9 @@
 	1. Parameter:			Zeiger auf Programmvariable
 	2. Parameter:			Zeiger auf Spielzustand
 	3. Parameter:			poly_mode
-	return:						errno
+	return:						gm_err / en_err
 */
 
-int gm_update(CApp*, Game_State*, unsigned short int);
+int gm_update(CApp*, Game_State*, unsigned short int*);
 
 #endif

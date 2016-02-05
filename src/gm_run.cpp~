@@ -2,70 +2,67 @@
 
 int run()
 {
-  int exit_code = EXIT_SUCCESS;
+  int exit_code = ERR_GM_NO_ERROR;
   CApp * pApp = new CApp();
 	Game_State state = load_menu;
 
-  // init SDL
+	// Debug Mode?
 
-	if(SDL_Init(SDL_INIT_EVERYTHING) == 0)
-  {
-    #if MODE == DEBUG_MODE
-      printf("SDL 2 initialized...\n");
-		#endif
+  #if MODE == DEBUG_MODE
+  	pApp->init_debug_log(8182);
+		pApp->write_log("init_engine()", DB_MSG_HL);
+	#endif
+	
+  // initialisiere das Spiel
 
-		// initialisiere das Spiel
-
-		exit_code = init(pApp);
+	exit_code = pApp->init_engine("3D Fighter");
     
-		if(exit_code == EXIT_SUCCESS)
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		// Lade Menü
+
+		pApp->set_number_models(4);
+		init_models_menu(pApp->get_model_addr());
+
+		// initialisiere CPU Messgerät
+
+    pApp->cpu_set_timestamp(SDL_GetTicks());
+    pApp->cpu_set_timestep(pApp->cpu_get_timestamp() * 0.001);
+		pApp->cpu_set_timestamp_prev();
+
+		// Programmschleife
+
+	  while(SDL_PollEvent(pApp->get_event()) || (exit_code == ERR_GM_NO_ERROR && state != end))
 		{
-      #if MODE == DEBUG_MODE
-				printf("Window created...\nOpen GL intialized...\nShader loaded...\n");
-			#endif
-
-			// initialisiere CPU Messgerät
-
-      pApp->cpu_set_timestamp(SDL_GetTicks());
-      pApp->cpu_set_timestep(pApp->cpu_get_timestamp() * 0.001);
-			pApp->cpu_set_timestamp_prev();
-
-			// Programmschleife
-
-		  while(SDL_PollEvent(pApp->get_event()) || (exit_code == EXIT_SUCCESS && state != quit))
+			if(exit_code == ERR_GM_NO_ERROR) // von gm_update
 			{
-				if(exit_code == EXIT_SUCCESS) // von gm_update
-				{
-					exit_code = gm_draw(pApp, &state);
+				exit_code = gm_draw(pApp, &state);
 				
-					if(exit_code == EXIT_SUCCESS)
-					{
-						exit_code = gm_update(pApp, &state);
+				if(exit_code == ERR_GM_NO_ERROR)
+				{
+					exit_code = gm_update(pApp, &state, pApp->get_poly_mode());
 
-						// Prozessor messen
+					// Prozessor messen
 
-						pApp->cpu_set_timestamp_prev();
-						pApp->cpu_set_timestamp(SDL_GetTicks());
-						pApp->cpu_set_timestep((pApp->cpu_get_timestamp() - pApp->cpu_get_timestamp_prev()) * 0.001);
-					}
+					pApp->cpu_set_timestamp_prev();
+					pApp->cpu_set_timestamp(SDL_GetTicks());
+					pApp->cpu_set_timestep((pApp->cpu_get_timestamp() - pApp->cpu_get_timestamp_prev()) * 0.001);
 				}
 			}
 		}
-		else
-		{
-			#if MODE == DEBUG_MODE
-				printf("ERROR: init() failed...\n");
-			#endif
-		}
-  }
-  else
+	}
+	else
 	{
-		exit_code = EINVAL;
-
 		#if MODE == DEBUG_MODE
-    	printf("ERROR: could not init SDL 2...\n");
+			pApp->write_log("<b>GAME:</b> init_engine() fehlgeschlagen...", DB_MSG_ERR);
 		#endif
-  }
+	}
+
+	// Debug Log?
+
+	#if MODE == DEBUG_MODE
+    pApp->create_log();
+	#endif
 
 	// Speicher zerlegen
 

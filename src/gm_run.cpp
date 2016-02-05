@@ -21,7 +21,7 @@ int run()
 	{
 		// Lade Menü
 
-		pApp->set_number_models(2);
+		pApp->set_number_models(5);
 		init_models_menu(pApp->get_model_addr());
 
 		// initialisiere CPU Messgerät
@@ -32,7 +32,7 @@ int run()
 
 		// Programmschleife
 
-	  while(SDL_PollEvent(pApp->get_event()) || (exit_code == ERR_GM_NO_ERROR && state != quit))
+	  while(SDL_PollEvent(pApp->get_event()) || (exit_code == ERR_GM_NO_ERROR && state != end))
 		{
 			if(exit_code == ERR_GM_NO_ERROR) // von gm_update
 			{

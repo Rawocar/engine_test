@@ -11,7 +11,9 @@
 #include <cstdio>
 #include <string.h>
 #include <errno.h>
-#include <stdio.h>
+
+#include "en_glb.h"
+#include "en_error.h"
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -25,7 +27,7 @@
 	1. Parameter:			Dateipfad
 	2. Parameter:			Buffer zum beschreiben, muss bereits richtige Größe haben
 	3. Parameter:			Länge des Inhaltes der Datei (mit Nullterminierung)
-	return:						errno
+	return:						en_err
 */
 
 int read_file(const char*, char*, unsigned int);
@@ -37,5 +39,15 @@ int read_file(const char*, char*, unsigned int);
 */
 
 int len_file(const char*);
+
+/*
+	Beschreibung:			Diese Funktion öffnet eine .bmp Datei.
+	1. Parameter:			Dateipfad
+	2. Parameter:			Zeiger auf int für width
+	3. Parameter:			Zeiger auf int für height
+	return:						en_err
+*/
+
+int load_bmp(const char*, int*, int*);
 
 #endif
