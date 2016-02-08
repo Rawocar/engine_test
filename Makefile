@@ -11,6 +11,7 @@ S007 = code/src/en_app.cpp
 S008 = code/src/en_shader.cpp
 S009 = code/src/en_file.cpp
 S010 = code/src/en_3d_mdl.cpp
+S011 = code/src/en_string.cpp
 
 H001 = code/incl/gm_main.h
 H002 = code/incl/gm_run.h
@@ -27,9 +28,10 @@ H012 = code/incl/en_3d_mdl.h
 H013 = code/incl/en_glb.h
 H014 = code/incl/en_error.h
 H015 = code/incl/gm_error.h
+H016 = code/incl/en_string.h
 
-SOURCE = $(S001) $(S002) $(S003) $(S004) $(S005) $(S006) $(S007) $(S008) $(S009) $(S010)
-HEADER = $(H001) $(H002) $(H003) $(H004) $(H005) $(H006) $(H007) $(H008) $(H009) $(H010) $(H011) $(H012) $(H013) $(H014) $(H015)
+SOURCE = $(S001) $(S002) $(S003) $(S004) $(S005) $(S006) $(S007) $(S008) $(S009) $(S010) $(S011)
+HEADER = $(H001) $(H002) $(H003) $(H004) $(H005) $(H006) $(H007) $(H008) $(H009) $(H010) $(H011) $(H012) $(H013) $(H014) $(H015) $(H016)
 SDL = -lSDL2
 OGL = -lGL -lGLEW -lSOIL
 OUT = -o 3d_fighter
