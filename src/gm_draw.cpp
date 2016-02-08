@@ -23,6 +23,7 @@ int gm_draw(CApp * pApp, Game_State * pstate)
 			pApp->draw_model(1);
 			pApp->draw_model(2);
 			pApp->draw_model(3);
+			//pApp->draw_model(4);
 		} break;
 		case quit:
 		{

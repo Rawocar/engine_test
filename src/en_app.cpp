@@ -573,7 +573,7 @@ void CApp::write_log(const char * pStr, short int flag)
   unsigned short int len = strlen(pStr) + (2 * (OPEN_TAG - 1)) + (2 * (CLOSE_TAG - 1)) + (HR_TAG - 1);
 
   if(flag == DB_MSG_ERR || flag == DB_MSG_HL)
-		{len = strlen(pStr) + this->debug_i + (OPEN_TAG - 1) + (OPEN_TAG_STYLE - 1) + (2 * (CLOSE_TAG - 1)) + (HR_TAG - 1);}
+		{len = strlen(pStr) + (OPEN_TAG - 1) + (OPEN_TAG_STYLE - 1) + (2 * (CLOSE_TAG - 1)) + (HR_TAG - 1);}
 
 	// prüfe, ob String reinpasst
 

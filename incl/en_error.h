@@ -44,5 +44,6 @@
 #define ERR_EN_MEM_TEXTURE									-34								// es konnte kein Speicher für Texture Mapping reserviert werden
 #define ERR_EN_PAR_TEXTURE									-35								// glTexParameteri ist fehlgeschlagen
 #define	ERR_EN_CHECKLINK_PROG								-36								// glGetProgramiv ist fehlgeschlagen
+#define ERR_EN_NO_MEM												-37								// es konnte kein Speicher alloziiert werden
 
 #endif

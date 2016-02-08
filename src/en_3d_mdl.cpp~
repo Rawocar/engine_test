@@ -299,7 +299,7 @@ int CModel_3D::set_texture_cube(const char * pFile)
   int exit_code = ERR_EN_NO_ERROR;
 	int width = 0;
 	int height = 0;
-  unsigned char * pImg_data = NULL;
+	BMP * pBmp = NULL;
 
 	glBindVertexArray(this->id_vao);
 
@@ -315,11 +315,11 @@ int CModel_3D::set_texture_cube(const char * pFile)
 		{
 			// Lade Textur
 
-      pImg_data = SOIL_load_image(pFile, &width, &height, 0, SOIL_LOAD_RGB);
+      pBmp = load_bmp(pFile);
 
-			if(pImg_data != NULL)
+			if(pBmp != NULL)
 			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pImg_data);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pBmp);
 
 				if(glGetError() == GL_NO_ERROR)
 				{
@@ -334,7 +334,7 @@ int CModel_3D::set_texture_cube(const char * pFile)
 						{
 							// Speicher bereinigen
 
-							SOIL_free_image_data(pImg_data);
+							delete pBmp;
 
 							// Lege Texturkoordinaten fest
 
@@ -459,9 +459,7 @@ void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t bl
 int CModel_3D::set_texture_square(const char * pFile)
 {
   int exit_code = ERR_EN_NO_ERROR;
-	int width = 0;
-	int height = 0;
-  unsigned char * pImg_data = NULL;
+	BMP * pBmp = NULL;
 
 	glBindVertexArray(this->id_vao);
 
@@ -477,11 +475,11 @@ int CModel_3D::set_texture_square(const char * pFile)
 		{
 			// Lade Textur
 
-      pImg_data = SOIL_load_image(pFile, &width, &height, 0, SOIL_LOAD_RGB);
+      pBmp = load_bmp(pFile);
 
-			if(pImg_data != NULL)
+			if(pBmp != NULL)
 			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pImg_data);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pBmp->biWidth, pBmp->biHeight, 0, GL_BGR, GL_UNSIGNED_BYTE, pBmp);
 
 				if(glGetError() == GL_NO_ERROR)
 				{
@@ -496,7 +494,7 @@ int CModel_3D::set_texture_square(const char * pFile)
 						{
 							// Speicher bereinigen
 
-							SOIL_free_image_data(pImg_data);
+							delete pBmp;
 
 							// Lege Texturkoordinaten fest
 
@@ -505,9 +503,9 @@ int CModel_3D::set_texture_square(const char * pFile)
 							if(this->pTex_Pos != NULL)
 							{
 								pTex_Pos[0].x = 0.0f;	pTex_Pos[0].y = 0.0f;	// FRONT
-								pTex_Pos[1].x = 0.0f; pTex_Pos[1].y = 1.0f;
+								pTex_Pos[1].x = 1.0f; pTex_Pos[1].y = 1.0f;
 								pTex_Pos[2].x = 1.0f;	pTex_Pos[2].y = 0.0f;
-								pTex_Pos[3].x = 1.0f; pTex_Pos[3].y = 1.0f;
+								pTex_Pos[3].x = 0.0f; pTex_Pos[3].y = 1.0f;
 
 								glVertexAttribPointer(INDEX_TEXTURE, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -555,15 +553,22 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 {
   int exit_code = ERR_EN_NO_ERROR;
 	FILE * pFile = NULL;
-	unsigned int number_vertexes = 0;
+	unsigned int num_vertexes = 0;
 	const unsigned short int SIZE = 100;
-	const unsigned short int SIZEF = 30;
 	char pBuffer[SIZE];
-	char pFloatx[SIZEF];
-	char pFloaty[SIZEF];
-  char pFloatz[SIZEF];
-	unsigned short int i = 0;
-	unsigned short int l = 0;
+	VEC3 * pVertex = NULL;
+	unsigned int vertex_i = 0;
+	unsigned int v1 = 0;
+	unsigned int v2 = 0;
+	unsigned int v3 = 0;
+	unsigned int vt1 = 0;
+	unsigned int vt2 = 0;
+	unsigned int vt3 = 0;
+	unsigned int vn1 = 0;
+	unsigned int vn2 = 0;
+	unsigned int vn3 = 0;
+	unsigned int num_vertexes_zip = 0;
+	short int flag = 0;
 
 	// öffne Datei
 
@@ -571,95 +576,136 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 
 	if(pFile != NULL)
 	{
-		// Ermittle Anzahl an Vertexes
+		// Ermittle Anzahl an Vertexes (echt und komprimiert)
 
-		while(!feof(pFile))
-		{
-			fgets(pBuffer, SIZE, pFile);
-			
+		while(fgets(pBuffer, SIZE, pFile) != NULL)
+		{			
+			// echt
+
+			if(pBuffer[0] == 'f' && pBuffer[1] == ' ')
+				{num_vertexes += 3;}
+
+			// komprimiert
+
 			if(pBuffer[0] == 'v' && pBuffer[1] == ' ')
-				{number_vertexes++;}
+				{num_vertexes_zip++;}
 		}
 
-		this->init_vertexes(number_vertexes);
+		// ermittle Art der Faces / Buffer ist als letztes mit f gefüllt
 
-		// schließe die Datei wieder
-
-		fclose(pFile);
-		pFile = NULL;
-	
-		// öffne Datei erneut und lade Daten
-
-		pFile = fopen(pPath, "r");
-
-		if(pFile != NULL)
+		switch(count_in_str(pBuffer, '/'))
 		{
-			while(!feof(pFile))
+			case 0:
 			{
-				fgets(pBuffer, SIZE, pFile);
+				flag = FACES_1;
+			} break;
+			case 3:
+			{
+				flag = FACES_2;
+			} break;
+			case 6:
+			{
+				if(pBuffer[first_appear(pBuffer, '/') + 1] == '/')
+					{flag = FACES_3;}
+				else
+					{flag = FACES_4;}
+			} break;
+		};
 
+		this->init_vertexes(num_vertexes);
+		pVertex = new VEC3[num_vertexes_zip];
+
+		if(pVertex != NULL)
+		{
+			// bereite zum erneuten Durchlaufen vor
+
+			rewind(pFile);
+			clearerr(pFile);
+
+			while(fgets(pBuffer, SIZE, pFile) != NULL)
+			{
 				// VERTEXES
 
 				if(pBuffer[0] == 'v' && pBuffer[1] == ' ')
 				{
-					i = 2;
+					sscanf(pBuffer, "v %f %f %f\n", &(pVertex[vertex_i].x), &(pVertex[vertex_i].y), &(pVertex[vertex_i].z));
+					vertex_i++;
+      	}
 
-					// x
+				// FACES
 
-					while(pBuffer[i] != ' ')
+				if(pBuffer[0] == 'f' && pBuffer[1] == ' ')
+				{
+					// 1. Möglichkeit v1 v2 v3
+
+					if(flag == FACES_1)
 					{
-						i++;
-						l++;
-					}
+						if(sscanf(pBuffer, "f %u %u %u\n", &v1, &v2, &v3) != EOF)
+						{
+							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
+							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
+							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
+						}
+          }
 
-					strncpy(pFloatx, (pBuffer + (i - l)), l);
-					i++;
-					l = 0;
+					// 2. Möglichkeit v1/vt1 v2/vt2 v3/vt3
 
-					// y
-
-					while(pBuffer[i] != ' ')
+					if(flag == FACES_2)
 					{
-						i++;
-						l++;
-					}
+						if(sscanf(pBuffer, "f %u/%u %u/%u %u/%u\n", &v1, &vt1, &v2, &vt2, &v3, &vt3) != EOF)
+						{
+							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
+							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
+							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
+						}
+          }
 
-					strncpy(pFloaty, (pBuffer + (i - l)), l);
-					i++;
-					l = 0;
+					// 3. Möglichkeit v1//vn1 v2//vn2 v3//vn3
 
-					// z
-					
-					while(pBuffer[i] != '\n')
+					if(flag == FACES_3)
 					{
-						i++;
-						l++;
+						if(sscanf(pBuffer, "f %u//%u %u//%u %u//%u\n", &v1, &vn1, &v2, &vn2, &v3, &vn3) != EOF)
+						{
+							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
+							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
+							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
+						}
+          }
+
+					// 4. Möglichkeit v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3
+
+					if(flag == FACES_4)
+					{
+						if(sscanf(pBuffer, "f %u/%u/%u %u/%u/%u %u/%u/%u\n", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3) != EOF)
+						{
+							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
+							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
+							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
+						}
 					}
+				}
+			}
 
-					strncpy(pFloatz, (pBuffer + (i - l)), l);
-					l = 0;					
-	
-					this->add_vertex_pos(atof(pFloatx), atof(pFloaty), atof(pFloatz));
-					printf("x: %f, y: %f, z: %f\n", atof(pFloatx), atof(pFloaty), atof(pFloatz));
-        }
+			// alle Daten geladen, schließe Datei
 
-				// SPÄTER ANDERE DATEN
+			fclose(pFile);
 
-				for(unsigned int i = 0 ; i < this->number_vertexes ; i++)
-					{this->add_vertex_col(1.0f, 1.0f, 1.0f, 1.0f);}
+			// füge Farbe hinzu
 
-				// alle Daten geladen, schließe Datei
+			for(unsigned int i = 0 ; i < this->number_vertexes ; i++)
+				{this->add_vertex_col(0.0f, 0.0f, 0.0f, 1.0f);}
 
-				fclose(pFile);
+			// erstelle Model
 
-				// erstelle Model
+			this->draw_mode = GL_TRIANGLES;
+			exit_code = this->create_model();	
 
-				this->draw_mode = GL_TRIANGLES;
-				exit_code = this->create_model();
-			}	
+			// Speicher bereinigen
+
+			delete [] pVertex;
 		}
 		else
-			{exit_code = ERR_EN_FOPEN;}
+			{exit_code = ERR_EN_NO_MEM;}
 	}
 	else
 		{exit_code = ERR_EN_FOPEN;}

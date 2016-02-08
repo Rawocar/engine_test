@@ -11,9 +11,36 @@
 #include <cstdio>
 #include <string.h>
 #include <errno.h>
-
+#include <stdio.h>
 #include "en_glb.h"
 #include "en_error.h"
+
+///////////////////////////////////////////
+///////////////////////////////////////////
+// Strukturen
+///////////////////////////////////////////
+///////////////////////////////////////////
+
+typedef struct EN_bmp
+{
+	short int bfType;
+	int bfSize;
+	int bfReserved;
+	int bfOffBits;
+	int biSize;
+	int biWidth;
+	int biHeight;
+	short int biPlanes;
+	short int biBitCount;
+	int biCompression;
+	int biSizeImage;
+	int biXPelsPerMeter;
+	int biYPelsPerMeter;
+	int biClrUsed;
+	int biClrImportant;
+	unsigned char * pData;
+	int num_bytes;
+} BMP;
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -39,5 +66,14 @@ int read_file(const char*, char*, unsigned int);
 */
 
 int len_file(const char*);
+
+/*
+	Beschreibung:			Diese Funktion lädt eine bitmap Datei und übergibt sie an einen
+										Buffer.
+	1. Parameter:			Dateipfad
+	return:						Bilddaten
+*/
+
+BMP * load_bmp(const char*);
 
 #endif

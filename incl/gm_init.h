@@ -14,6 +14,7 @@
 #include "en_app.h"
 #include "en_shader.h"
 #include "en_3d_mdl.h"
+#include "en_file.h"
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -23,7 +24,7 @@
 
 /*
 	Beschreibung:			Diese Funktion initialisiert alle Models fürs Hauptmenü.
-	1. Parameter:			Programmvariables
+	1. Parameter:			Modelzeiger
 	return:						gm_err / en_err
 */
 

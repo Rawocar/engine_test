@@ -7,6 +7,12 @@
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 
+typedef struct En_Point
+{
+  float x;
+	float y;
+} Point;
+
 typedef struct En_Math_fVec3
 {
   float x;

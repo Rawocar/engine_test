@@ -11,12 +11,14 @@
 #include <GL/glew.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include "SOIL/SOIL.h"
-#include <stdio.h>
+
 #include "en_error.h"
 #include "en_math.h"
+#include "en_string.h"
+#include "en_file.h"
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -30,18 +32,10 @@
 #define INDEX_TEXTURE	2
 #define SQUARE_VERT		4
 #define CUBE_VERT			36
-
-///////////////////////////////////////////
-///////////////////////////////////////////
-// Strukturen
-///////////////////////////////////////////
-///////////////////////////////////////////
-
-typedef struct En_Point
-{
-  float x;
-	float y;
-} Point;
+#define FACES_1				-33
+#define FACES_2				-34
+#define FACES_3				-35
+#define FACES_4				-36
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
