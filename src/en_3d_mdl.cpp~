@@ -183,7 +183,7 @@ void CModel_3D::draw(int shader_program_id)
 
 	// Textur
 	
-	if(texture_set)
+	if(this->texture_set)
 		{glBindTexture(GL_TEXTURE_2D, this->id_texture);}
 
 	// richtige Position
@@ -459,7 +459,10 @@ void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t bl
 int CModel_3D::set_texture_square(const char * pFile)
 {
   int exit_code = ERR_EN_NO_ERROR;
-	BMP * pBmp = NULL;
+	//BMP * pBmp = NULL;
+	unsigned char * pData = NULL;
+	int width = 0;
+	int height = 0;
 
 	glBindVertexArray(this->id_vao);
 
@@ -475,14 +478,16 @@ int CModel_3D::set_texture_square(const char * pFile)
 		{
 			// Lade Textur
 
-      pBmp = load_bmp(pFile);
+      pData = SOIL_load_image(pFile, &width, &height, 0, SOIL_LOAD_RGB);
 
-			if(pBmp != NULL)
+			if(pData != NULL)
 			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pBmp->biWidth, pBmp->biHeight, 0, GL_BGR, GL_UNSIGNED_BYTE, pBmp);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pData);
 
 				if(glGetError() == GL_NO_ERROR)
 				{
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+     			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
  					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 					
@@ -494,7 +499,8 @@ int CModel_3D::set_texture_square(const char * pFile)
 						{
 							// Speicher bereinigen
 
-							delete pBmp;
+							//delete pBmp;
+							SOIL_free_image_data(pData);								
 
 							// Lege Texturkoordinaten fest
 
@@ -503,9 +509,9 @@ int CModel_3D::set_texture_square(const char * pFile)
 							if(this->pTex_Pos != NULL)
 							{
 								pTex_Pos[0].x = 0.0f;	pTex_Pos[0].y = 0.0f;	// FRONT
-								pTex_Pos[1].x = 1.0f; pTex_Pos[1].y = 1.0f;
+								pTex_Pos[1].x = 0.0f; pTex_Pos[1].y = 1.0f;
 								pTex_Pos[2].x = 1.0f;	pTex_Pos[2].y = 0.0f;
-								pTex_Pos[3].x = 0.0f; pTex_Pos[3].y = 1.0f;
+								pTex_Pos[3].x = 1.0f; pTex_Pos[3].y = 1.0f;
 
 								glVertexAttribPointer(INDEX_TEXTURE, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 

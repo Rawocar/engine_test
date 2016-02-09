@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "SOIL/SOIL.h"
 
 #include "en_error.h"
 #include "en_math.h"
