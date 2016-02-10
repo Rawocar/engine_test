@@ -1,6 +1,13 @@
 #ifndef H_EN_GLB
 #define H_EN_GLB
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Konstanten

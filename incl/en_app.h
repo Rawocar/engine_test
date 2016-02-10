@@ -1,6 +1,13 @@
 #ifndef H_EN_APP
 #define H_EN_APP
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Einbindungen

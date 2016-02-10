@@ -1,6 +1,13 @@
 #ifndef H_EN_STRING
 #define H_EN_STRING
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Funktionsprototypen

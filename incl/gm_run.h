@@ -1,6 +1,13 @@
 #ifndef H_GM_RUN
 #define H_GM_RUN
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Einbindungen

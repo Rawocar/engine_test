@@ -1,6 +1,13 @@
 #ifndef H_GM_STATE
 #define H_GM_STATE
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Strukturen

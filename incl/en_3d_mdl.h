@@ -1,6 +1,13 @@
 #ifndef H_EN_3D_MDL
 #define H_EN_3D_MDL
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Einbindungen

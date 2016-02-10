@@ -1,6 +1,13 @@
 #ifndef H_EN_MATH
 #define H_EN_MATH
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Konstanten
