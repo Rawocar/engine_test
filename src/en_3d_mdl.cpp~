@@ -488,8 +488,8 @@ int CModel_3D::set_texture_square(const char * pFile)
 				{
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
      			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
- 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+ 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 					
 					if(glGetError() == GL_NO_ERROR)
 					{
@@ -699,7 +699,7 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 			// füge Farbe hinzu
 
 			for(unsigned int i = 0 ; i < this->number_vertexes ; i++)
-				{this->add_vertex_col(0.0f, 0.0f, 0.0f, 1.0f);}
+				{this->add_vertex_col(0.5f, 0.5f, 0.7f, 1.0f);}
 
 			// erstelle Model
 
@@ -725,4 +725,295 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 unsigned int CModel_3D::get_num_vertexes()
 {
 	return this->number_vertexes;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CModel_3D::create_circle(float radius, float num_v, uint8_t red, uint8_t green, uint8_t blue)
+{
+	float r = (float)((float) red / (float) 255);
+	float g = (float)((float) green / (float) 255);
+	float b = (float)((float) blue / (float) 255);
+	float current_angle = 0.0f;
+	float angle_step = 360.0f / num_v;
+	
+	this->init_vertexes(num_v + 2);					// Mittelpunkt und Abschluss müssen dazugezählt werden
+	this->add_vertex_pos(0.0f, 0.0f, 0.0f);	// Mittelpunkt
+
+	for(int i = 0 ; i < num_v ; i++)
+  {
+		this->add_vertex_pos(radius * cosf((current_angle * PI) / 180), radius * sinf((current_angle * PI) / 180), 0.0f);
+		current_angle += angle_step;
+	}
+
+	this->add_vertex_pos(radius * cosf((0.0f * PI) / 180), radius * sinf((0.0f * PI) / 180), 0.0f); // Abschluss
+
+	// Farben
+
+	for(int i = 0 ; i < (num_v + 2) ; i++)
+		{this->add_vertex_col(r, g, b, 1.0f);}
+
+	// Zeichen Modus
+
+	this->draw_mode = GL_TRIANGLE_FAN;
+
+	// Model erstellen
+
+	this->create_model();
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CModel_3D::create_sphere(float radius, float num_v, uint8_t red, uint8_t green, uint8_t blue)
+{
+	// num_v muss gerade sein
+
+	if((int)num_v < 8)
+		{num_v = 8.0f;}
+	if(((int)num_v % 2) != 0)
+		{num_v += 1;}
+	if((((int)num_v / 2) % 2) != 0)
+		{num_v += 2;}
+
+  float r = (float)((float) red / (float) 255);
+	float g = (float)((float) green / (float) 255);
+	float b = (float)((float) blue / (float) 255);
+	int shells_half = forced_into((((int)num_v - 2) / 2), 2);		// Schalen pro Kreishälfte auf z-Ebene
+	float angle_step = 360.0f / num_v;
+	float current_angle = 0.0f;
+	float current_angle_z = 0.0f;
+	VEC3 ** Sphere_Points = new VEC3 * [shells_half + 1];
+
+	for(int i = 0 ; i < (shells_half + 1) ; i++)
+		{Sphere_Points[i] = new VEC3[(int) num_v];}
+
+	float z = 0.0f;
+	float y = 0.0f; 
+
+	////////////////////////
+	// Modelpunkte erstellen
+	////////////////////////
+
+	// erstelle einen Halbkreis
+	// beginne mit größtem Radius
+
+	for(int i = 0 ; i < (int)num_v ; i++)
+	{
+		Sphere_Points[0][i].x = radius * cosf((current_angle * PI) / 180);
+		Sphere_Points[0][i].y = radius * sinf((current_angle * PI) / 180);
+		Sphere_Points[0][i].z = z;
+
+		current_angle += angle_step;
+	}
+	
+	// nun alle nach außen laufenden Schalen	
+
+	for(int i = 1 ; i < shells_half ; i++)
+	{
+		current_angle = 0.0f;
+		current_angle_z += angle_step;
+		y = radius * cosf((current_angle_z * PI) / 180);
+		z = radius * sinf((current_angle_z * PI) / 180); 
+
+		// berechne Schale
+
+		for(int h = 0 ; h < (int)num_v ; h++)
+		{
+			Sphere_Points[i][h].x = y * cosf((current_angle * PI) / 180);
+			Sphere_Points[i][h].y = y * sinf((current_angle * PI) / 180);
+			Sphere_Points[i][h].z = z;
+
+			current_angle += angle_step;
+		}
+	}
+
+	// ganz außen
+
+	for(int i = 0 ; i < (int)num_v ; i++)
+	{
+		Sphere_Points[shells_half][i].x = 0.0f;
+		Sphere_Points[shells_half][i].y = 0.0f;
+		Sphere_Points[shells_half][i].z = radius;
+	}
+
+	////////////////////////
+	// Modelmesh erstellen
+	////////////////////////
+
+	this->init_vertexes((int)num_v * 6 * shells_half * 2);
+
+	// Vorderseite
+
+	for(int i = 0 ; i < shells_half ; i++)
+	{
+		for(int h = 0 ; h < (int)num_v ; h++)
+		{
+			// Verbinde ein Viereck
+			// links oben
+			// links unten
+			// rechts unten
+			// rechts unten
+			// links oben
+			// rechts oben
+			
+			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, Sphere_Points[i][h % (int)num_v].z);
+			this->add_vertex_pos(Sphere_Points[i + 1][h % (int)num_v].x, Sphere_Points[i + 1][h % (int)num_v].y, Sphere_Points[i + 1][h % (int)num_v].z);
+			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, Sphere_Points[i + 1][(h + 1) % (int)num_v].z);	
+			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, Sphere_Points[i + 1][(h + 1) % (int)num_v].z);
+			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, Sphere_Points[i][h % (int)num_v].z);												
+			this->add_vertex_pos(Sphere_Points[i][(h + 1) % (int)num_v].x, Sphere_Points[i][(h + 1) % (int)num_v].y, Sphere_Points[i][(h + 1) % (int)num_v].z);			
+
+			// Farben hinzufügen
+
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);	
+		}
+	}
+
+	// Rückseite
+
+	for(int i = 0 ; i < shells_half ; i++)
+	{
+		for(int h = 0 ; h < (int)num_v ; h++)
+		{
+			// Verbinde ein Viereck
+			// links oben
+			// links unten
+			// rechts unten
+			// rechts unten
+			// links oben
+			// rechts oben
+
+			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, -Sphere_Points[i][h % (int)num_v].z);
+			this->add_vertex_pos(Sphere_Points[i + 1][h % (int)num_v].x, Sphere_Points[i + 1][h % (int)num_v].y, -Sphere_Points[i + 1][h % (int)num_v].z);
+			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, -Sphere_Points[i + 1][(h + 1) % (int)num_v].z);	
+			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, -Sphere_Points[i + 1][(h + 1) % (int)num_v].z);
+			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, -Sphere_Points[i][h % (int)num_v].z);												
+			this->add_vertex_pos(Sphere_Points[i][(h + 1) % (int)num_v].x, Sphere_Points[i][(h + 1) % (int)num_v].y, -Sphere_Points[i][(h + 1) % (int)num_v].z);			
+
+			// Farben hinzufügen
+
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);			
+		}
+	}
+
+	// Speicher freigeben
+
+	for(int i = 0 ; i < (shells_half + 1) ; i++)
+		{delete [] Sphere_Points[i];}
+	
+	delete [] Sphere_Points;
+
+	// Zeichen Modus
+
+	this->draw_mode = GL_TRIANGLES;
+
+	// Model erstellen
+
+	this->create_model();
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CModel_3D::create_pyramid(float size, float to_peak, uint8_t red, uint8_t green, uint8_t blue)
+{
+	float r = (float)((float) red / (float) 255);
+	float g = (float)((float) green / (float) 255);
+	float b = (float)((float) blue / (float) 255);
+
+	this->init_vertexes(PYRAMID_VERT);
+	this->add_vertex_pos(-size, -(to_peak / 2), size);		// vordere Seite
+	this->add_vertex_pos(size, -(to_peak / 2), size);
+	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
+	this->add_vertex_pos(-size, -(to_peak / 2), -size);		// hintere Seite
+	this->add_vertex_pos(size, -(to_peak / 2), -size);
+	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
+	this->add_vertex_pos(-size, -(to_peak / 2), size);		// linke Seite
+	this->add_vertex_pos(-size, -(to_peak / 2), -size);
+	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
+	this->add_vertex_pos(size, -(to_peak / 2), size);     // rechte Seite
+	this->add_vertex_pos(size, -(to_peak / 2), -size);
+	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
+
+	for(int i = 0 ; i < PYRAMID_VERT ; i++)
+		{this->add_vertex_col(r, g, b, 1.0f);}
+
+	// Zeichen Modus
+
+	this->draw_mode = GL_TRIANGLES;
+
+	// Model erstellen
+
+	this->create_model();
+}  
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CModel_3D::create_cone(float radius, float to_peak, float num_v, uint8_t red, uint8_t green, uint8_t blue)
+{
+	float r = (float)((float) red / (float) 255);
+	float g = (float)((float) green / (float) 255);
+	float b = (float)((float) blue / (float) 255);
+	float angle_step = 360.0f / num_v;
+	float current_angle = 0.0f;
+	VEC3 * pVertex = new VEC3[(int)num_v];				// Kreisfläche / ein zusätzlicher für den Abschluss
+
+	for(int i = 0 ; i < num_v ; i++)
+	{
+		pVertex[i].x = radius * cosf((current_angle * PI) / 180);
+		pVertex[i].z = radius * sinf((current_angle * PI) / 180);
+		pVertex[i].y = -(to_peak / 2);
+		current_angle += angle_step;
+	}
+
+	// Model erstellen
+
+	this->init_vertexes((3 * (int)num_v) * 2);
+
+	// Grundfläche
+
+  for(int i = 0 ; i < (int)num_v ; i++)
+	{
+		this->add_vertex_pos(pVertex[i].x, pVertex[i].y, pVertex[i].z);
+		this->add_vertex_pos(pVertex[(i + 1) % (int)num_v].x, pVertex[(i + 1) % (int)num_v].y, pVertex[(i + 1) % (int)num_v].z);
+		this->add_vertex_pos(0.0f, -(to_peak / 2), 0.0f);
+		this->add_vertex_col(r, g, b, 1.0f);
+		this->add_vertex_col(r, g, b, 1.0f);
+		this->add_vertex_col(r, g, b, 1.0f);
+	}
+
+	// Spitze
+
+	for(int i = 0 ; i < (int)num_v ; i++)
+	{
+		this->add_vertex_pos(pVertex[i].x, pVertex[i].y, pVertex[i].z);
+		this->add_vertex_pos(pVertex[(i + 1) % (int)num_v].x, pVertex[(i + 1) % (int)num_v].y, pVertex[(i + 1) % (int)num_v].z);
+		this->add_vertex_pos(0.0f, -(to_peak / 2), 0.0f);
+		this->add_vertex_col(r, g, b, 1.0f);
+		this->add_vertex_col(r, g, b, 1.0f);
+		this->add_vertex_col(r, g, b, 1.0f);
+	}
+
+	// Zeichen Modus
+
+	this->draw_mode = GL_TRIANGLES;
+
+	// Model erstellen
+
+	this->create_model();
+
+	delete [] pVertex;
 }

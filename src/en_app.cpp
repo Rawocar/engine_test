@@ -311,8 +311,15 @@ int CApp::init_shader()
 int CApp::init_wnd(const char * pName, int x, int y, int w, int h, int flags)
 {
   int exit_code = ERR_EN_NO_ERROR;
+	SDL_DisplayMode dmode;
 
-	this->pWindow = SDL_CreateWindow(pName, x, y, w, h, flags);
+	if(w == 0 && h == 0)
+	{
+		if(!SDL_GetCurrentDisplayMode(0, &dmode))
+			{this->pWindow = SDL_CreateWindow(pName, x, y, dmode.w, dmode.h, flags);}
+	}
+	else
+		{this->pWindow = SDL_CreateWindow(pName, x, y, w, h, flags);}
 
   if(this->pWindow == NULL)
 		{exit_code = ERR_EN_WND_FAILED;}
@@ -671,7 +678,7 @@ int CApp::init_engine(const char * pApp_name)
 		{
   		// initialisiere das Fenster
 
-  		exit_code = this->init_wnd(pApp_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 768, SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
+  		exit_code = this->init_wnd(pApp_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 			if(exit_code == ERR_EN_NO_ERROR)
 			{

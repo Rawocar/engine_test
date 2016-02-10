@@ -102,11 +102,11 @@ void zoom_camera(SDL_Event event, CApp * pApp)
 	float factor_inc = 1.05f;
 	float factor_dec = 0.95f;
 
-	// heraus zoomen bix max .z = 6.0f
+	// heraus zoomen bix max .z = 9.0f
 
 	if(event.wheel.y < 0)
 	{
-    if(camera_pos.z * factor_inc < 6.0f)
+    if(camera_pos.z * factor_inc < 90.0f)
 			{pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_inc, camera_pos.z * factor_inc));}
 	}
 

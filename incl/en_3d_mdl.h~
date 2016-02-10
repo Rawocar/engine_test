@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "SOIL/SOIL.h"
+#include <math.h>
 
 #include "en_error.h"
 #include "en_math.h"
@@ -32,6 +34,7 @@
 #define INDEX_TEXTURE	2
 #define SQUARE_VERT		4
 #define CUBE_VERT			36
+#define PYRAMID_VERT	12
 #define FACES_1				-33
 #define FACES_2				-34
 #define FACES_3				-35
@@ -58,7 +61,7 @@ class CModel_3D
 		unsigned int id_texture;							// ID der Textur
 		Point * pTex_Pos;											// Texture Mapping
 		bool texture_set;											// sagt aus, ob eine Textur gesetzt wurde
-		GLenum draw_mode;											// sagt aus, wie OpenGL zeichnen soll, standard auf GL_TRIANGLES
+		GLenum draw_mode;											// sagt aus, wie OpenGL zeichnen soll, standard auf GL_TRIANGLES	
 
 	public:
 
@@ -183,6 +186,51 @@ class CModel_3D
 		*/
 
 		unsigned int get_num_vertexes();
+
+		/*
+			Beschreibung:			Diese Funktion erstellt eine Kreisfläche.
+			1. Parameter:			Radius
+			2. Parameter:			Anzahl an Kreispunkten für Genauigkeit
+			3. Parameter:			rot wert
+			4. Parameter:			grün wert
+			5. Parameter:			blau wert
+		*/
+
+		void create_circle(float, float, uint8_t, uint8_t, uint8_t);
+
+		/*
+			Beschreibung:			Diese Funktion erstellt eine Kugel.
+			1. Parameter:			Größter Radius
+			2. Parameter:			Anzahl an Kreispunkten pro Schale. Muss eine gerade Zahl sein, die durch 2 geteilt ebenfalls gerade ist!
+			3. Parameter:			rot wert
+			4. Parameter:			grün wert
+			5. Parameter:			blau wert
+		*/
+
+		void create_sphere(float, float, uint8_t, uint8_t, uint8_t);
+
+		/*
+			Beschreibung:			Diese Funktion erstellt eine Pyramide.
+			1. Parameter:			Spannweit in eine Dimension für den Boden
+			2. Parameter:			Abstand Boden zur Spitze
+			3. Parameter:			rot wert
+			4. Parameter:			grün wert
+			5. Parameter:			blau wert
+		*/
+
+		void create_pyramid(float, float, uint8_t, uint8_t, uint8_t);
+
+		/*
+			Beschreibung:			Diese Funktion erstellt einen Kegel.
+			1. Parameter:			radius
+			2. Parameter:			Abstand Boden zur Spitze
+			3. Parameter:			Anzahl an Kreispunkten für Genauigkeit
+			4. Parameter:			rot wert
+			5. Parameter:			grün wert
+			6. Parameter:			blau wert
+		*/
+
+		void create_cone(float, float, float, uint8_t, uint8_t, uint8_t);
 };
 
 #endif

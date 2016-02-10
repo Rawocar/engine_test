@@ -21,7 +21,7 @@ int run()
 	{
 		// Lade Menü
 
-		pApp->set_number_models(5);
+		pApp->set_number_models(8);
 		init_models_menu(pApp);
 
 		// initialisiere CPU Messgerät

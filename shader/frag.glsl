@@ -14,5 +14,5 @@ out vec4 color;
 
 void main(void)
 {
-	color = texture(tex, _uv)/* + vec4(_color)*/;
+	color = texture(tex, _uv) + vec4(_color);
 }

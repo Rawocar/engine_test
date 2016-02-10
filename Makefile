@@ -12,6 +12,7 @@ S008 = code/src/en_shader.cpp
 S009 = code/src/en_file.cpp
 S010 = code/src/en_3d_mdl.cpp
 S011 = code/src/en_string.cpp
+S012 = code/src/en_math.cpp
 
 H001 = code/incl/gm_main.h
 H002 = code/incl/gm_run.h
@@ -30,7 +31,7 @@ H014 = code/incl/en_error.h
 H015 = code/incl/gm_error.h
 H016 = code/incl/en_string.h
 
-SOURCE = $(S001) $(S002) $(S003) $(S004) $(S005) $(S006) $(S007) $(S008) $(S009) $(S010) $(S011)
+SOURCE = $(S001) $(S002) $(S003) $(S004) $(S005) $(S006) $(S007) $(S008) $(S009) $(S010) $(S011) $(S012)
 HEADER = $(H001) $(H002) $(H003) $(H004) $(H005) $(H006) $(H007) $(H008) $(H009) $(H010) $(H011) $(H012) $(H013) $(H014) $(H015) $(H016)
 SDL = -lSDL2
 OGL = -lGL -lGLEW -lSOIL
