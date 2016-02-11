@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include "gm_error.h"
 #include "gm_event.h"
 #include "gm_state.h"
 #include "en_app.h"

@@ -13,7 +13,8 @@ id_vao(0),
 current_col_ver(0),
 id_texture(0),
 texture_set(0),
-draw_mode(GL_TRIANGLE_FAN)
+draw_mode(GL_TRIANGLE_FAN),
+create_flag(0)
 {
 	this->pPos_Vertex = NULL;
 	this->pVBO = new unsigned int[NUMBER_VBO];
@@ -48,7 +49,9 @@ void CModel_3D::init_vertexes(unsigned int number)
 {
   this->number_vertexes = number;
   this->pPos_Vertex = new VEC3[this->number_vertexes];
-	this->pCol_Vertex = new VEC4[this->number_vertexes];
+
+	if(this->create_flag == MDL_COLOR)
+		{this->pCol_Vertex = new VEC4[this->number_vertexes];}
 }
 
 //------------------------------------------------------------------------
@@ -102,41 +105,46 @@ int CModel_3D::create_model()
 							if(glGetError() == GL_NO_ERROR)
 							{
 								// Farben
+								// =================================================>
 
-								glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[1]);
-
-								if(glGetError() == GL_NO_ERROR)
+								if(this->create_flag == MDL_COLOR)
 								{
-									glBufferData(GL_ARRAY_BUFFER, (sizeof(VEC4) * this->number_vertexes), pCol_Vertex, GL_STATIC_DRAW);
-
+									glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[1]);
+								
 									if(glGetError() == GL_NO_ERROR)
 									{
-										glVertexAttribPointer(INDEX_COLOR, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+										glBufferData(GL_ARRAY_BUFFER, (sizeof(VEC4) * this->number_vertexes), pCol_Vertex, GL_STATIC_DRAW);
 
 										if(glGetError() == GL_NO_ERROR)
 										{
-	  									glEnableVertexAttribArray(INDEX_COLOR);
-								
-											if(glGetError() != GL_NO_ERROR)
-												{exit_code = ERR_EN_MDL_ENABLE_VAO;}
-											else
-											{
-												// Speicher bereinigen
+											glVertexAttribPointer(INDEX_COLOR, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 
+											if(glGetError() == GL_NO_ERROR)
+											{
+	  										glEnableVertexAttribArray(INDEX_COLOR);
+								
+												if(glGetError() != GL_NO_ERROR)
+													{exit_code = ERR_EN_MDL_ENABLE_VAO;}
+												
 												delete [] pCol_Vertex;
-												delete [] pPos_Vertex;
 												pCol_Vertex = NULL;
-												pPos_Vertex = NULL;
 											}
+											else
+												{exit_code = ERR_EN_MDL_VAO_P;}
 										}
 										else
-											{exit_code = ERR_EN_MDL_VAO_P;}
+											{exit_code = ERR_EN_MDL_VBO_DATA;}
 									}
 									else
-										{exit_code = ERR_EN_MDL_VBO_DATA;}
+										{exit_code = ERR_EN_MDL_BIND_VBO;}
 								}
-								else
-									{exit_code = ERR_EN_MDL_BIND_VBO;}
+
+								// =================================================>
+
+								// Speicher bereinigen
+	
+								delete [] pPos_Vertex;
+								pPos_Vertex = NULL;
 							}
 							else
 								{exit_code = ERR_EN_MDL_ENABLE_VAO;}
@@ -221,8 +229,9 @@ void CModel_3D::set_mdl_pos(float x, float y, float z)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_cube(float size, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+void CModel_3D::create_cube(float size, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha, short int flag)
 {
+	this->create_flag = flag;
   this->init_vertexes(CUBE_VERT);
 
 	float r = (float)((float) red / (float) 255);
@@ -275,9 +284,12 @@ void CModel_3D::create_cube(float size, uint8_t red, uint8_t green, uint8_t blue
 
 	// Farben
 
-	for(int i = 0 ; i < CUBE_VERT ; i++)
-		{this->add_vertex_col(r, g, b, a);}
-
+	if(this->create_flag == MDL_COLOR)
+	{
+		for(int i = 0 ; i < CUBE_VERT ; i++)
+			{this->add_vertex_col(r, g, b, a);}
+	}
+	
 	// Model erstellen
 
 	this->create_model();
@@ -384,11 +396,11 @@ int CModel_3D::set_texture_cube(const char * pFile)
 								pTex_Pos[34].x = 0.0f; 	pTex_Pos[34].y = 0.0f;
 								pTex_Pos[35].x = 0.0f; 	pTex_Pos[35].y = 0.0f;
 
-								glVertexAttribPointer(INDEX_TEXTURE, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+								glVertexAttribPointer(INDEX_UV, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 								if(glGetError() == GL_NO_ERROR)
 								{
-									glEnableVertexAttribArray(INDEX_TEXTURE); 
+									glEnableVertexAttribArray(INDEX_UV); 
 									this->texture_set = 1;
 
 									if(glGetError() != GL_NO_ERROR)
@@ -424,8 +436,9 @@ int CModel_3D::set_texture_cube(const char * pFile)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t blue)
+void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t blue, short int flag)
 {
+  this->create_flag = flag;
 	this->init_vertexes(SQUARE_VERT);
 
 	float r = (float)((float) red / (float) 255);
@@ -441,8 +454,11 @@ void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t bl
 
 	// Farben
 
-	for(int i = 0 ; i < SQUARE_VERT ; i++)
-		{this->add_vertex_col(r, g, b, 1.0f);}
+	if(this->create_flag == MDL_COLOR)
+	{
+		for(int i = 0 ; i < SQUARE_VERT ; i++)
+			{this->add_vertex_col(r, g, b, 1.0f);}
+  }
 
 	// Zeichen Modus
 
@@ -459,12 +475,12 @@ void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t bl
 int CModel_3D::set_texture_square(const char * pFile)
 {
   int exit_code = ERR_EN_NO_ERROR;
-	//BMP * pBmp = NULL;
 	unsigned char * pData = NULL;
 	int width = 0;
 	int height = 0;
 
 	glBindVertexArray(this->id_vao);
+	glEnable(GL_TEXTURE_2D);
 
 	// generiere Textur
 
@@ -488,8 +504,8 @@ int CModel_3D::set_texture_square(const char * pFile)
 				{
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
      			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
- 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+ 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 					
 					if(glGetError() == GL_NO_ERROR)
 					{
@@ -499,7 +515,6 @@ int CModel_3D::set_texture_square(const char * pFile)
 						{
 							// Speicher bereinigen
 
-							//delete pBmp;
 							SOIL_free_image_data(pData);								
 
 							// Lege Texturkoordinaten fest
@@ -508,25 +523,39 @@ int CModel_3D::set_texture_square(const char * pFile)
 
 							if(this->pTex_Pos != NULL)
 							{
-								pTex_Pos[0].x = 0.0f;	pTex_Pos[0].y = 0.0f;	// FRONT
-								pTex_Pos[1].x = 0.0f; pTex_Pos[1].y = 1.0f;
-								pTex_Pos[2].x = 1.0f;	pTex_Pos[2].y = 0.0f;
-								pTex_Pos[3].x = 1.0f; pTex_Pos[3].y = 1.0f;
-
-								glVertexAttribPointer(INDEX_TEXTURE, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
+								glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[2]);
+				
 								if(glGetError() == GL_NO_ERROR)
 								{
-									glEnableVertexAttribArray(INDEX_TEXTURE); 
-									this->texture_set = 1;
-									delete [] pTex_Pos;
-									pTex_Pos = NULL;
+									pTex_Pos[0].x = 0.0f;	pTex_Pos[0].y = 0.0f;	// FRONT
+									pTex_Pos[1].x = 0.0f; pTex_Pos[1].y = 1.0f;
+									pTex_Pos[2].x = 1.0f;	pTex_Pos[2].y = 0.0f;
+									pTex_Pos[3].x = 1.0f; pTex_Pos[3].y = 1.0f;
 
-									if(glGetError() != GL_NO_ERROR)
-										{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
+									glBufferData(GL_ARRAY_BUFFER, (sizeof(Point) * 4), pTex_Pos, GL_STATIC_DRAW);
+
+									if(glGetError() == GL_NO_ERROR)
+									{
+										glVertexAttribPointer(INDEX_UV, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+										if(glGetError() == GL_NO_ERROR)
+										{
+											glEnableVertexAttribArray(INDEX_UV); 
+											this->texture_set = 1;
+											delete [] pTex_Pos;
+											pTex_Pos = NULL;
+
+											if(glGetError() != GL_NO_ERROR)
+												{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
+										}
+										else
+											{exit_code = ERR_EN_MDL_VAO_P;}
+									}
+									else
+										{exit_code = ERR_EN_MDL_VBO_DATA;}
 								}
 								else
-									{exit_code = ERR_EN_MDL_VAO_P;}
+									{exit_code = ERR_EN_MDL_BIND_VBO;}
 							}
 							else
 								{exit_code = ERR_EN_MEM_TEXTURE;}
@@ -766,8 +795,10 @@ void CModel_3D::create_circle(float radius, float num_v, uint8_t red, uint8_t gr
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_sphere(float radius, float num_v, uint8_t red, uint8_t green, uint8_t blue)
+void CModel_3D::create_sphere(float radius, float num_v, uint8_t red, uint8_t green, uint8_t blue, short int flag)
 {
+	this->create_flag = flag;
+
 	// num_v muss gerade sein
 
 	if((int)num_v < 8)
@@ -898,13 +929,16 @@ void CModel_3D::create_sphere(float radius, float num_v, uint8_t red, uint8_t gr
 			this->add_vertex_pos(Sphere_Points[i][(h + 1) % (int)num_v].x, Sphere_Points[i][(h + 1) % (int)num_v].y, -Sphere_Points[i][(h + 1) % (int)num_v].z);			
 
 			// Farben hinzufügen
-
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);			
+			
+			if(this->create_flag == MDL_COLOR)
+			{
+				this->add_vertex_col(r, g, b, 1.0f);
+				this->add_vertex_col(r, g, b, 1.0f);
+				this->add_vertex_col(r, g, b, 1.0f);
+				this->add_vertex_col(r, g, b, 1.0f);
+				this->add_vertex_col(r, g, b, 1.0f);
+				this->add_vertex_col(r, g, b, 1.0f);			
+      }
 		}
 	}
 
@@ -927,8 +961,10 @@ void CModel_3D::create_sphere(float radius, float num_v, uint8_t red, uint8_t gr
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_pyramid(float size, float to_peak, uint8_t red, uint8_t green, uint8_t blue)
+void CModel_3D::create_pyramid(float size, float to_peak, uint8_t red, uint8_t green, uint8_t blue, short int flag)
 {
+	this->create_flag = flag;
+
 	float r = (float)((float) red / (float) 255);
 	float g = (float)((float) green / (float) 255);
 	float b = (float)((float) blue / (float) 255);
@@ -947,8 +983,11 @@ void CModel_3D::create_pyramid(float size, float to_peak, uint8_t red, uint8_t g
 	this->add_vertex_pos(size, -(to_peak / 2), -size);
 	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
 
-	for(int i = 0 ; i < PYRAMID_VERT ; i++)
-		{this->add_vertex_col(r, g, b, 1.0f);}
+	if(this->create_flag == MDL_COLOR)
+	{
+		for(int i = 0 ; i < PYRAMID_VERT ; i++)
+			{this->add_vertex_col(r, g, b, 1.0f);}
+  }
 
 	// Zeichen Modus
 
@@ -962,8 +1001,9 @@ void CModel_3D::create_pyramid(float size, float to_peak, uint8_t red, uint8_t g
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_cone(float radius, float to_peak, float num_v, uint8_t red, uint8_t green, uint8_t blue)
+void CModel_3D::create_cone(float radius, float to_peak, float num_v, uint8_t red, uint8_t green, uint8_t blue, short int flag)
 {
+	this->create_flag = flag;
 	float r = (float)((float) red / (float) 255);
 	float g = (float)((float) green / (float) 255);
 	float b = (float)((float) blue / (float) 255);
@@ -1001,10 +1041,14 @@ void CModel_3D::create_cone(float radius, float to_peak, float num_v, uint8_t re
 	{
 		this->add_vertex_pos(pVertex[i].x, pVertex[i].y, pVertex[i].z);
 		this->add_vertex_pos(pVertex[(i + 1) % (int)num_v].x, pVertex[(i + 1) % (int)num_v].y, pVertex[(i + 1) % (int)num_v].z);
-		this->add_vertex_pos(0.0f, -(to_peak / 2), 0.0f);
-		this->add_vertex_col(r, g, b, 1.0f);
-		this->add_vertex_col(r, g, b, 1.0f);
-		this->add_vertex_col(r, g, b, 1.0f);
+		this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
+
+		if(this->create_flag == MDL_COLOR)
+		{
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+			this->add_vertex_col(r, g, b, 1.0f);
+    }
 	}
 
 	// Zeichen Modus

@@ -19,10 +19,10 @@ int gm_update(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 			pApp->rotate(0, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
 			pApp->rotate(1, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
 			pApp->rotate(2, (pApp->cpu_get_timestep() * -0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(4, (pApp->cpu_get_timestep() * -0.30f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//pApp->rotate(4, (pApp->cpu_get_timestep() * -0.30f), glm::vec3(0.0f, 1.0f, 0.0f));
 			pApp->rotate(5, (pApp->cpu_get_timestep() * -0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
 			pApp->rotate(6, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(7, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//pApp->rotate(7, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(1.0f, 0.0f, 0.0f));
 		} break;
 		case quit:
 		{

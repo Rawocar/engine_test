@@ -1,6 +1,13 @@
 #ifndef H_EN_3D_MDL
 #define H_EN_3D_MDL
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Einbindungen
@@ -28,10 +35,10 @@
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 
-#define NUMBER_VBO		2
+#define NUMBER_VBO		3
 #define INDEX_POS			0
 #define INDEX_COLOR		1
-#define INDEX_TEXTURE	2
+#define INDEX_UV			2
 #define SQUARE_VERT		4
 #define CUBE_VERT			36
 #define PYRAMID_VERT	12
@@ -39,6 +46,8 @@
 #define FACES_2				-34
 #define FACES_3				-35
 #define FACES_4				-36
+#define MDL_COLOR			-502
+#define MDL_TEXTURE		-503
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -62,6 +71,7 @@ class CModel_3D
 		Point * pTex_Pos;											// Texture Mapping
 		bool texture_set;											// sagt aus, ob eine Textur gesetzt wurde
 		GLenum draw_mode;											// sagt aus, wie OpenGL zeichnen soll, standard auf GL_TRIANGLES	
+		short int create_flag;								// MDL_COLOR oder MDL_TEXTURE
 
 	public:
 
@@ -134,9 +144,10 @@ class CModel_3D
 			3. Parameter:			grün wert (0 - 255)
 			4. Parameter:			blau wert (0 - 255)
 			5. Parameter:			alpha wert (0 - 255)
+			6. Parameter:			flag, das aussagt, ob das Model eine Textur oder eine Farbe haben wird
 		*/
 
-		void create_cube(float, uint8_t, uint8_t, uint8_t, uint8_t);
+		void create_cube(float, uint8_t, uint8_t, uint8_t, uint8_t, short int);
 
 		/*
 			Beschreibung:			Diese Funktion rotiert ein Model.
@@ -160,9 +171,10 @@ class CModel_3D
 			2. Parameter:			rot wert (0 - 255)
 			3. Parameter:			grün wert (0 - 255)
 			4. Parameter:			blau wert (0 - 255)
+			5. Parameter:			flag, das aussagt, ob das Model eine Textur oder eine Farbe haben wird
 		*/
 
-		void create_square(float, uint8_t, uint8_t, uint8_t);
+		void create_square(float, uint8_t, uint8_t, uint8_t, short int);
 
 		/*
 			Beschreibung:			Diese Funktion legt eine Textur auf ein Quadrat. Diese Funktion kann nach create_square aufgerufen werden.
@@ -205,9 +217,10 @@ class CModel_3D
 			3. Parameter:			rot wert
 			4. Parameter:			grün wert
 			5. Parameter:			blau wert
+			6. Parameter:			flag, das aussagt, ob das Model eine Textur oder eine Farbe haben wird
 		*/
 
-		void create_sphere(float, float, uint8_t, uint8_t, uint8_t);
+		void create_sphere(float, float, uint8_t, uint8_t, uint8_t, short int);
 
 		/*
 			Beschreibung:			Diese Funktion erstellt eine Pyramide.
@@ -216,9 +229,10 @@ class CModel_3D
 			3. Parameter:			rot wert
 			4. Parameter:			grün wert
 			5. Parameter:			blau wert
+			6. Parameter:			flag, das aussagt, ob das Model eine Textur oder eine Farbe haben wird
 		*/
 
-		void create_pyramid(float, float, uint8_t, uint8_t, uint8_t);
+		void create_pyramid(float, float, uint8_t, uint8_t, uint8_t, short int);
 
 		/*
 			Beschreibung:			Diese Funktion erstellt einen Kegel.
@@ -228,9 +242,10 @@ class CModel_3D
 			4. Parameter:			rot wert
 			5. Parameter:			grün wert
 			6. Parameter:			blau wert
+			7. Parameter:			flag, das aussagt, ob das Model eine Textur oder eine Farbe haben wird
 		*/
 
-		void create_cone(float, float, float, uint8_t, uint8_t, uint8_t);
+		void create_cone(float, float, float, uint8_t, uint8_t, uint8_t, short int);
 };
 
 #endif

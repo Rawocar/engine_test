@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <SDL2/SDL.h>
 
+#include "gm_error.h"
 #include "en_app.h"
 #include "gm_glb.h"
 #include "gm_init.h"

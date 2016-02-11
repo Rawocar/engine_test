@@ -40,7 +40,6 @@ typedef struct EN_bmp
 	int biClrImportant;
 	unsigned char * pData;
 	int num_bytes;
-	int num_data_bytes;
 } BMP;
 
 ///////////////////////////////////////////
