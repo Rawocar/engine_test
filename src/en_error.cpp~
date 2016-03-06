@@ -1,0 +1,17 @@
+#include "../incl/en_error.h"
+
+void CApp::print_error(const char * pText, int exit_code)
+{
+	char pBuffer[1000];
+	pBuffer[0] = '\0';
+	strcat(pBuffer, pText);
+
+	switch(exit_code)
+	{
+		case ERR_EN_OGL_DEPTHSIZE:
+		{
+			strcat(pBuffer, "SDL_GL_DEPTH_SIZE konnte nicht gesetzt werden!");
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fehler", pBuffer, this->pWindow);
+		}	break;
+	};
+}

@@ -1,19 +1,48 @@
 VERSION = 1.00
 CFLAGS = -Wall -Wpedantic -Wextra -std=c++11
 
-S001 = code/src/gm_main.cpp
-S002 = code/src/gm_run.cpp
-S003 = code/src/gm_init.cpp
-S004 = code/src/gm_draw.cpp
-S005 = code/src/gm_update.cpp
-S006 = code/src/gm_event.cpp
-S007 = code/src/en_app.cpp
-S008 = code/src/en_shader.cpp
-S009 = code/src/en_file.cpp
-S010 = code/src/en_3d_mdl.cpp
-S011 = code/src/en_string.cpp
-S012 = code/src/en_math.cpp
+# ----------------------------------------------
+# ENGINE
+# ----------------------------------------------
 
+# SRC --> ENGINE
+
+ES001 = code/src/en_app.cpp
+ES002 = code/src/en_shader.cpp
+ES003 = code/src/en_file.cpp
+ES004 = code/src/en_3d_mdl.cpp
+ES005 = code/src/en_string.cpp
+ES006 = code/src/en_math.cpp
+ES007 = code/src/en_light.cpp
+
+# HEADER --> ENGINE
+
+EH001 = code/incl/en_app.h
+EH002 = code/incl/en_shader.h
+EH003 = code/incl/en_file.h
+EH004 = code/incl/en_3d_mdl.h
+EH005 = code/incl/en_glb.h
+EH006 = code/incl/en_error.h
+EH007 = code/incl/en_string.h
+EH008 = code/incl/en_light.h
+EH009 = code/incl/en_math.h
+
+# ----------------------------------------------
+# GAME
+# ----------------------------------------------
+
+# SRC --> GAME
+
+GS001 = code/src/gm_main.cpp
+GS002 = code/src/gm_run.cpp
+GS003 = code/src/gm_init.cpp
+GS004 = code/src/gm_draw.cpp
+GS005 = code/src/gm_update.cpp
+GS006 = code/src/gm_event.cpp
+
+# HEADER --> GAME
+
+H015 = code/incl/gm_error.h
 H001 = code/incl/gm_main.h
 H002 = code/incl/gm_run.h
 H003 = code/incl/gm_glb.h
@@ -22,20 +51,21 @@ H005 = code/incl/gm_draw.h
 H006 = code/incl/gm_update.h
 H007 = code/incl/gm_event.h
 H008 = code/incl/gm_state.h
-H009 = code/incl/en_app.h
-H010 = code/incl/en_shader.h
-H011 = code/incl/en_file.h
-H012 = code/incl/en_3d_mdl.h
-H013 = code/incl/en_glb.h
-H014 = code/incl/en_error.h
-H015 = code/incl/gm_error.h
-H016 = code/incl/en_string.h
 
-SOURCE = $(S001) $(S002) $(S003) $(S004) $(S005) $(S006) $(S007) $(S008) $(S009) $(S010) $(S011) $(S012)
-HEADER = $(H001) $(H002) $(H003) $(H004) $(H005) $(H006) $(H007) $(H008) $(H009) $(H010) $(H011) $(H012) $(H013) $(H014) $(H015) $(H016)
+# ----------------------------------------------
+# COMPILE
+# ----------------------------------------------
+
+E_SRC = $(ES001) $(ES002) $(ES003) $(ES004) $(ES005) $(ES006) $(ES007)
+G_SRC = $(GS001) $(GS002) $(GS003) $(GS004) $(GS005) $(GS006) 
+
+E_HEAD = $(EH001) $(EH002) $(EH003) $(EH004) $(EH005) $(EH006) $(EH007) $(EH008) $(EH009)
+G_HEAD = $(GH001) $(GH002) $(GH003) $(GH004) $(GH005) $(GH006) $(GH007) $(GH008)
+
 SDL = -lSDL2
 OGL = -lGL -lGLEW -lSOIL
+LIBRARY = $(SDL) $(OGL)
 OUT = -o 3d_fighter
 
-3d_fighter: $(SOURCE) $(HEADER) $(LIBRARY)
-	g++ $(CFLAGS) $(SOURCE) $(LIBRARY) $(SDL) $(OGL) $(OUT) 
+3d_fighter: $(E_SRC) $(G_SRC) $(E_HEAD) $(G_HEAD) $(LIBRARY)
+	g++ $(CFLAGS) $(E_SRC) $(G_SRC) $(LIBRARY) $(OUT) 

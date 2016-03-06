@@ -45,12 +45,24 @@
 #define ERR_EN_SHADER_PROG									-28								// glCreateProgram ist fehlgeschlagen
 #define ERR_EN_GEN_TEXTURE									-29								// glGenTextures ist fehlgeschlagen
 #define ERR_EN_BIND_TEXTURE									-30								// glBindTexture ist fehlgeschlagen
-#define ERR_EN_LOAD_TEXTURE									-31								// glBindTexture ist fehlgeschlagen
-#define ERR_EN_GL_TEXTURE										-32								// glBindTexture ist fehlgeschlagen
-#define ERR_EN_MIPMAP_TEXTURE								-33								// glBindTexture ist fehlgeschlagen
-#define ERR_EN_MEM_TEXTURE									-34								// es konnte kein Speicher für Texture Mapping reserviert werden
-#define ERR_EN_PAR_TEXTURE									-35								// glTexParameteri ist fehlgeschlagen
-#define	ERR_EN_CHECKLINK_PROG								-36								// glGetProgramiv ist fehlgeschlagen
-#define ERR_EN_NO_MEM												-37								// es konnte kein Speicher alloziiert werden
+#define ERR_EN_LOAD_IMG											-31								// SOIL_load_image ist fehlgeschlagen
+#define ERR_EN_GL_TEXTURE										-32								// glTexImage2D ist fehlgeschlagen
+#define ERR_EN_MIPMAP_TEXTURE								-33								// glGenerateMipmap ist fehlgeschlagen
+#define ERR_EN_PARI_TEXTURE									-34								// glTexParameteri ist fehlgeschlagen
+#define	ERR_EN_CHECKLINK_PROG								-35								// glGetProgramiv ist fehlgeschlagen
+#define ERR_EN_NO_MEM												-36								// es konnte kein Speicher alloziiert werden
+#define ERR_EN_SDL													-37								// SDL konnte nicht initialisiert werden
+#define ERR_EN_STENCIL_TEST									-38								// gl Enable stencil test ist fehlgeschlagen
+#define ERR_EN_NO_MEMORY										-39								// NULL, kein Speicherverweis
+#define ERR_EN_ACTIVE_TEX										-40								// glActiveTexture ist fehlgeschlagen
+#define	ERR_EN_UNIF_LOC											-41								// glGetUniformLocation ist fehlgeschlagen
+#define ERR_EN_MAT4F												-42								// glUniformMatrix4fv ist fehlgeschlagen
+#define ERR_EN_DRAW_ARR											-43								// glDrawArrays ist fehlgeschlagen
+#define ERR_EN_1F														-44								// glUniform1f ist fehlgeschlagen
+#define ERR_EN_2DTEX												-45								// glEnable(GL_TEXTURE_2D) ist fehlgeschlagen
+#define ERR_EN_1I														-46								// glUniform1i ist fehlgeschlagen
+#define ERR_EN_3F														-47								// glUniform3f ist fehlgeschlagen
+#define ERR_EN_BLEND												-48								// glEnable(GL_BLEND) fehlgeschlagen
+#define ERR_EN_BLEND_FUNC										-49								// glBlendFunc() ist fehlgeschlagen
 
 #endif

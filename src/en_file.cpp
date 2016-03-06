@@ -140,14 +140,14 @@ BMP * load_bmp(const char * pPath)
 					fread(pData_BGRA, pBmp->biSizeImage, 1, pFile);
 
 					// Filtere Alpha
-//printf("SIZE:\t%d\n\n", (pBmp->biSizeImage / 4) * 3);
+
 					pBmp->pData = new unsigned char[(pBmp->biSizeImage / 4) * 3];
 					i = 0;
 
 					for(int g = 0 ; g < ((pBmp->biSizeImage / 4) * 3) ; g++)
 					{
 						pBmp->pData[g] = pData_BGRA[i];
-//						printf("g: %d\ni: %d\nData: %u\n\n", g, i, pBmp->pData[g]);
+
 						if(RGBbytes_in_row < ((3 * pBmp->biWidth) - 1))
 						{
 							RGBbytes_in_row++;

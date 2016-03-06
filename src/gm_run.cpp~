@@ -15,14 +15,13 @@ int run()
 	
   // initialisiere das Spiel
 
-	exit_code = pApp->init_engine("3D Fighter");
+	pApp->print_error("Intialisiere Engine...\n", (exit_code = pApp->init_engine("3D Fighter")));
     
 	if(exit_code == ERR_EN_NO_ERROR)
 	{
 		// Lade Menü
 
-		pApp->set_number_models(9);
-		init_models_menu(pApp);
+		init_models_menu(pApp, $state);
 
 		// initialisiere CPU Messgerät
 

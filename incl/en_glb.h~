@@ -1,6 +1,13 @@
 #ifndef H_EN_GLB
 #define H_EN_GLB
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Konstanten
@@ -16,5 +23,9 @@
 #define DB_MSG_OK					-32
 #define DB_MSG_ERR				-33
 #define DB_MSG_HL					-34
+#define SHADER_MAIN				0
+#define SHADER_LIGHT			1
+#define ON								1
+#define OFF								2
 
 #endif

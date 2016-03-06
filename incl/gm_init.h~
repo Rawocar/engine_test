@@ -1,6 +1,13 @@
 #ifndef H_GM_INIT
 #define H_GM_INIT
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Einbindungen
@@ -25,9 +32,10 @@
 /*
 	Beschreibung:			Diese Funktion initialisiert alle Models fürs Hauptmenü.
 	1. Parameter:			Modelzeiger
+	2. Parameter:			Zeiger auf Spielzustand
 	return:						gm_err / en_err
 */
 
-int init_models_menu(CApp*);
+int init_models_menu(CApp*, Game_State*);
 
 #endif

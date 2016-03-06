@@ -6,12 +6,8 @@ int gm_draw(CApp * pApp, Game_State * pstate)
 
   // Background
 
-  glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-	// Kamera
-
-	pApp->proj();
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// Spielstatus
 
@@ -19,14 +15,16 @@ int gm_draw(CApp * pApp, Game_State * pstate)
 	{
 		case load_menu:
 		{
-			pApp->draw_model(0);
-			pApp->draw_model(1);
-			pApp->draw_model(2);
-			pApp->draw_model(3);
-			//pApp->draw_model(4);
-			pApp->draw_model(5);
-			pApp->draw_model(6);
-			//pApp->draw_model(7);
+			pApp->draw_mdl();
+
+			if(pApp->print_error("Zeichne rechte Lampe...\n", pApp->draw_light(0)) == 1)
+				{*pstate = quit;}
+			if(pApp->print_error("Zeichne hintere Lampe...\n", pApp->draw_light(1));
+				{*pstate = quit;}
+			if(pApp->print_error("Zeichne linke Lampe...\n", pApp->draw_light(2));
+				{*pstate = quit;}
+			if(pApp->print_error("Zeichne rechte vordere Lampe...\n", pApp->draw_light(3));
+				{*pstate = quit;}
 		} break;
 		case quit:
 		{

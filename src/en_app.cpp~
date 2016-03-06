@@ -10,21 +10,26 @@
 //------------------------------------------------------------------------
 
 CApp::CApp():
-shader_program(0),
-size_shader(0),
-number_models(0),
 poly_mode(POLY_MODE_FILL),
 en_error(ERR_EN_NO_ERROR),
 gm_error(0),
 debug_i(0),
 debug_size(0),
 gl_err(GL_NO_ERROR),
-log_bytes(0)
+log_bytes(0),
+number_lights(0)
 {
   this->pWindow = NULL;
-	this->pShaders = NULL;
-	this->ppModel = NULL;
 	this->pDebug_Str = NULL;
+	this->pShader = new Shader[2];
+	this->ppLight = NULL;
+
+	p3DModel_Head = new Elem_3D_Mdl;
+	p3DModel_Head->pLeft = p3DModel_Head;
+	p3DModel_Head->pRight = p3DModel_Head;
+	p3DModel_Head->pModel = NULL;
+	p3DModel_Head->ID = -1;
+	p3DModel_Head->active = 0;
 }
 
 //------------------------------------------------------------------------
@@ -35,17 +40,30 @@ CApp::~CApp()
 	if(this->pDebug_Str != NULL)
 		{delete [] this->pDebug_Str;}
 
-  if(this->ppModel != NULL)
+	delete [] pShader;
+
+	if(this->ppLight != NULL)
 	{
-		for(unsigned int i = 0 ; i < this->number_models ; i++)
-			{delete ppModel[i];}
+		for(unsigned int i = 0 ; i < this->number_lights ; i++)
+			{delete this->ppLight[i];}
 	}
 
-	if(this->ppModel != NULL)
-		{delete [] ppModel;}
+	if(this->ppLight != NULL)
+		{delete [] ppLight;}
 
-	if(this->size_shader > 0)
-		{delete [] pShaders;}
+	// lösche restliche Models
+
+	Elem_3D_Mdl * pCurrent = this->p3DModel_Head->pRight;
+	int ID = 0;
+
+	while(pCurrent != p3DModel_Head)
+	{
+		ID = pCurrent->ID;
+		pCurrent = pCurrent->pRight;
+		this->delete_3d_mdl(ID);
+	}
+
+	delete p3DModel_Head;
 }
 
 ///////////////////////////////////////////
@@ -126,9 +144,16 @@ int CApp::set_ogl_attr()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-glm::mat4 CApp::get_mdl_pos(unsigned int i)
+glm::mat4 CApp::get_mdl_pos(int ID)
 {
-  return ppModel[i]->get_mdl_pos();
+	glm::mat4 mdl = glm::mat4(1.0f);
+
+	CModel_3D * pModel = this->get_mdl(ID);
+	
+	if(pModel != NULL)
+		{mdl = pModel->get_mdl_pos();}
+
+	return mdl;
 }
 
 //------------------------------------------------------------------------
@@ -201,32 +226,39 @@ int CApp::init_shader()
 		pBuffer = new char[2048];
 	#endif
 
-  // erstelle Shader Programm
+	////////////////////////////////////////
+  // erstelle Shader Hauptprogramm
+	////////////////////////////////////////
 
-	this->shader_program = glCreateProgram();
+	#if EMODE == EDEBUG_MODE
+		this->write_log("<b>ENGINE:</b> --------------- Shader Main ---------------", DB_MSG_OK);
+	#endif
 
-	if(this->shader_program)
+	this->pShader[SHADER_MAIN].prog_id = glCreateProgram();
+
+	if(this->pShader[SHADER_MAIN].prog_id)
 	{
 		#if EMODE == EDEBUG_MODE
 			this->write_log("<b>ENGINE:</b> glCreateProgram: OK", DB_MSG_OK);
 		#endif
 
-		// Anzahl an Shader
-
-  	this->number_shader(2);
+		// Anzahl an Shader Schritte
+		
+		this->pShader[SHADER_MAIN].shader_steps = 2;
+		this->pShader[SHADER_MAIN].pID = new int [this->pShader[SHADER_MAIN].shader_steps];
 
 		// Lade Shader
 
-		this->set_shader_id(0, this->load_shader("shader/vert.glsl", GL_VERTEX_SHADER));
-		this->set_shader_id(1, this->load_shader("shader/frag.glsl", GL_FRAGMENT_SHADER));
+		this->set_shader_id(SHADER_MAIN, 0, this->load_shader(SHADER_MAIN, "shader/vert.glsl", GL_VERTEX_SHADER));
+		this->set_shader_id(SHADER_MAIN, 1, this->load_shader(SHADER_MAIN, "shader/frag.glsl", GL_FRAGMENT_SHADER));
 
 		// an die GPU senden und auf use schalten
 
-		glLinkProgram(this->shader_program);
+		glLinkProgram(this->pShader[SHADER_MAIN].prog_id);
 						
 		if((this->gl_err = glGetError()) == GL_NO_ERROR)
 		{
-			glGetProgramiv(this->shader_program, GL_LINK_STATUS, &param);
+			glGetProgramiv(this->pShader[SHADER_MAIN].prog_id, GL_LINK_STATUS, &param);
 		
 			if((this->gl_err = glGetError()) == GL_NO_ERROR)
 			{
@@ -236,7 +268,7 @@ int CApp::init_shader()
 						this->write_log("<b>ENGINE:</b> glLinkProgram: OK", DB_MSG_OK);
 					#endif
 
-					glUseProgram(this->shader_program);
+					glUseProgram(this->pShader[SHADER_MAIN].prog_id);
 			
 					if((this->gl_err = glGetError()) == GL_NO_ERROR)
 					{
@@ -259,7 +291,7 @@ int CApp::init_shader()
 					exit_code = ERR_EN_LINK_PROG;
 
 					#if EMODE == EDEBUG_MODE
-						glGetProgramInfoLog(this->shader_program, SIZE_LOG, &length_log, compile_log);
+						glGetProgramInfoLog(this->pShader[SHADER_MAIN].prog_id, SIZE_LOG, &length_log, compile_log);
 						sprintf(pBuffer, "<b>ENGINE:</b> failed to link shader program: %s --end", compile_log);
 						this->write_log(pBuffer, DB_MSG_ERR);
 					#endif
@@ -295,6 +327,114 @@ int CApp::init_shader()
 		#endif
 	}
 
+	glUseProgram(0);
+
+	////////////////////////////////////////
+  // erstelle Shader Licht Programm
+	////////////////////////////////////////
+
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		#if EMODE == EDEBUG_MODE
+			this->write_log("<b>ENGINE:</b> --------------- Shader Light ---------------", DB_MSG_OK);
+		#endif
+
+		this->pShader[SHADER_LIGHT].prog_id = glCreateProgram();
+
+		if(this->pShader[SHADER_LIGHT].prog_id)
+		{
+			#if EMODE == EDEBUG_MODE
+				this->write_log("<b>ENGINE:</b> glCreateProgram: OK", DB_MSG_OK);
+			#endif
+
+			// Anzahl an Shader Schritte
+		
+			this->pShader[SHADER_LIGHT].shader_steps = 2;
+			this->pShader[SHADER_LIGHT].pID = new int [this->pShader[SHADER_LIGHT].shader_steps];
+
+			// Lade Shader
+
+			this->set_shader_id(SHADER_LIGHT, 0, this->load_shader(SHADER_LIGHT, "shader/vert_light.glsl", GL_VERTEX_SHADER));
+			this->set_shader_id(SHADER_LIGHT, 1, this->load_shader(SHADER_LIGHT, "shader/frag_light.glsl", GL_FRAGMENT_SHADER));
+
+			// an die GPU senden und auf use schalten
+
+			glLinkProgram(this->pShader[SHADER_LIGHT].prog_id);
+						
+			if((this->gl_err = glGetError()) == GL_NO_ERROR)
+			{
+				glGetProgramiv(this->pShader[SHADER_LIGHT].prog_id, GL_LINK_STATUS, &param);
+		
+				if((this->gl_err = glGetError()) == GL_NO_ERROR)
+				{
+					if(param == GL_TRUE)
+					{
+						#if EMODE == EDEBUG_MODE
+							this->write_log("<b>ENGINE:</b> glLinkProgram: OK", DB_MSG_OK);
+						#endif
+
+						glUseProgram(this->pShader[SHADER_LIGHT].prog_id);
+			
+						if((this->gl_err = glGetError()) == GL_NO_ERROR)
+						{
+							#if EMODE == EDEBUG_MODE
+								this->write_log("<b>ENGINE:</b> glUseProgram: OK", DB_MSG_OK);
+							#endif
+						}
+						else
+						{
+							exit_code = ERR_EN_USE_PROG;
+	
+							#if EMODE == EDEBUG_MODE
+								sprintf(pBuffer, "<b>ENGINE:</b> glUseProgram() failed --end GL Flag: %d --end OpenGL Error: %s --end", this->gl_err, glewGetErrorString(this->gl_err));
+								this->write_log(pBuffer, DB_MSG_ERR);
+							#endif
+						}
+    	    }
+					else
+					{
+						exit_code = ERR_EN_LINK_PROG;
+	
+						#if EMODE == EDEBUG_MODE
+							glGetProgramInfoLog(this->pShader[SHADER_LIGHT].prog_id, SIZE_LOG, &length_log, compile_log);
+							sprintf(pBuffer, "<b>ENGINE:</b> failed to link shader program: %s --end", compile_log);
+							this->write_log(pBuffer, DB_MSG_ERR);
+						#endif
+					}
+    	  }
+				else
+				{
+					exit_code = ERR_EN_CHECKLINK_PROG;
+	
+					#if EMODE == EDEBUG_MODE
+						sprintf(pBuffer, "<b>ENGINE:</b> glGetProgramiv() failed --end GL Flag: %d --end OpenGL Error: %s --end", this->gl_err, glewGetErrorString(this->gl_err));
+						this->write_log(pBuffer, DB_MSG_ERR);
+					#endif
+				}
+			}
+			else
+			{
+				exit_code = ERR_EN_LINK_PROG;
+
+				#if EMODE == EDEBUG_MODE
+					sprintf(pBuffer, "<b>ENGINE:</b> glLinkProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(this->gl_err));
+					this->write_log(pBuffer, DB_MSG_ERR);
+				#endif
+			}
+		}
+		else
+		{
+			exit_code = ERR_EN_SHADER_PROG;
+
+			#if EMODE == EDEBUG_MODE
+				sprintf(pBuffer, "<b>ENGINE:</b> glCreateProgram() failed --end OpenGL Error: %s --end", glewGetErrorString(glGetError()));
+				this->write_log(pBuffer, DB_MSG_ERR);
+			#endif
+		}
+	}
+
+	glUseProgram(0);
+
 	#if EMODE == EDEBUG_MODE
 		delete [] pBuffer;
 	#endif
@@ -302,11 +442,8 @@ int CApp::init_shader()
 	return exit_code;
 }
 
-///////////////////////////////////////////
-///////////////////////////////////////////
-// public methods
-///////////////////////////////////////////
-///////////////////////////////////////////
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
 
 int CApp::init_wnd(const char * pName, int x, int y, int w, int h, int flags)
 {
@@ -319,7 +456,7 @@ int CApp::init_wnd(const char * pName, int x, int y, int w, int h, int flags)
 			{this->pWindow = SDL_CreateWindow(pName, x, y, dmode.w, dmode.h, flags);}
 	}
 	else
-		{this->pWindow = SDL_CreateWindow(pName, x, y, dmode.w, dmode.h, flags);}
+		{this->pWindow = SDL_CreateWindow(pName, x, y, w, h, flags);}
 
   if(this->pWindow == NULL)
 		{exit_code = ERR_EN_WND_FAILED;}
@@ -368,6 +505,131 @@ int CApp::init_open_gl()
 
   return exit_code;
 }
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CApp::set_shader_id(unsigned short int si, unsigned short int index, int id)
+{
+  this->pShader[si].pID[index] = id;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+unsigned short int CApp::get_shader_number(unsigned short int si)
+{
+  return this->pShader[si].shader_steps;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::get_shader_step_id(unsigned short int si, unsigned short int index)
+{
+  return this->pShader[si].pID[index];
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::get_shader_program_id(unsigned short int si)
+{
+  return this->pShader[si].prog_id;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CApp::init_camera()
+{
+	int width = 0;
+	int height = 0;
+  SDL_GetWindowSize(this->pWindow, &width, &height);
+
+	this->projection = glm::perspective
+	(
+    45.0f,              // 45 Grad Sichtfeld
+    (float)((float) width / (float) height),
+    0.1f,               // Only render what's 0.1 or more away from camera
+    100.0f              // Only render what's 100 or less away from camera
+	);
+
+	// Kamera
+
+	this->camera_pos = glm::vec3(0.0f, 1.0f, 3.0f);
+  this->camera_from_dir = glm::normalize(camera_pos - glm::vec3(0.0f, 0.0f, 0.0f));
+	this->camera_up = glm::cross(camera_from_dir, (glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), camera_from_dir))));
+	this->camera = glm::lookAt(camera_pos, camera_from_dir, camera_up);
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+CModel_3D * CApp::add_3d_mdl(int ID)
+{
+	Elem_3D_Mdl * pLeft_Before = this->p3DModel_Head->pLeft;
+
+	// initialisieren
+
+	Elem_3D_Mdl * pNew = new Elem_3D_Mdl;
+	pNew->ID = ID;
+	pNew->pModel = new CModel_3D();
+	pNew->active = 0;
+
+	// links einfügen
+
+	this->p3DModel_Head->pLeft = pNew;
+	pNew->pRight = this->p3DModel_Head;
+	pNew->pLeft = pLeft_Before;
+	pLeft_Before->pRight = pNew;
+
+	return pNew->pModel;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+CModel_3D * CApp::get_mdl(int ID)
+{
+	Elem_3D_Mdl * pCurrent = this->p3DModel_Head->pRight;
+	CModel_3D * pRet = NULL;
+
+	while(pCurrent->ID != ID && pCurrent != this->p3DModel_Head)
+		{pCurrent = pCurrent->pRight;}
+
+	// gefunden?
+
+	if(pCurrent->ID == ID)
+		{pRet = pCurrent->pModel;}
+
+	return pRet;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+Elem_3D_Mdl * CApp::get_mdl_elem(int ID)
+{
+  Elem_3D_Mdl * pCurrent = this->p3DModel_Head->pRight;
+	Elem_3D_Mdl * pRet = NULL;
+
+	while(pCurrent->ID != ID && pCurrent != this->p3DModel_Head)
+		{pCurrent = pCurrent->pRight;}
+
+	// gefunden?
+
+	if(pCurrent->ID == ID)
+		{pRet = pCurrent;}
+
+	return pRet;
+}
+
+///////////////////////////////////////////
+///////////////////////////////////////////
+// public methods
+///////////////////////////////////////////
+///////////////////////////////////////////
 
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
@@ -444,113 +706,108 @@ SDL_Event CApp::get_eventx()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CApp::number_shader(unsigned short int x)
+int CApp::draw_mdl()
 {
-	this->size_shader = x;
-	this->pShaders = new int[this->size_shader];
+	int exit_code = ERR_EN_NO_ERROR;
+	Elem_3D_Mdl * pCurrent = this->p3DModel_Head->pRight;
+
+	while(pCurrent != this->p3DModel_Head)
+	{
+		// aktiv?
+
+		if(pCurrent->active == 1)
+		{
+			exit_code = pCurrent->pModel->draw(this->pShader[SHADER_MAIN].prog_id);
+
+			if(exit_code != ERR_EN_NO_ERROR)
+				{break;}
+		}
+
+		pCurrent = pCurrent->pRight;
+	}	
+
+	return exit_code;
 }
 
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CApp::set_shader_program_id(int id)
+int CApp::proj()
 {
-  this->shader_program = id;
-}
+	int exit_code = ERR_EN_NO_ERROR;
 
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CApp::set_shader_id(unsigned short int index, int id)
-{
-  this->pShaders[index] = id;
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-unsigned short int CApp::get_shader_number()
-{
-  return this->size_shader;
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-int CApp::get_shader_id(unsigned short int index)
-{
-  return this->pShaders[index];
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-int CApp::get_shader_program_id()
-{
-  return this->shader_program;
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CApp::set_number_models(unsigned int number)
-{
-  this->number_models = number;
-	this->ppModel = new CModel_3D * [this->number_models];
-
-	for(unsigned int i = 0 ; i < this->number_models ; i++)
-		{this->ppModel[i] = new CModel_3D();}
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-CModel_3D ** CApp::get_model_addr()
-{
-  return this->ppModel;
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CApp::draw_model(unsigned int i)
-{
-  this->ppModel[i]->draw(this->shader_program);
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CApp::init_camera()
-{
-	int width = 0;
-	int height = 0;
-  SDL_GetWindowSize(this->pWindow, &width, &height);
-
-	this->projection = glm::perspective
-	(
-    45.0f,              // 45 Grad Sichtfeld
-    (float)((float) width / (float) height),
-    0.1f,               // Only render what's 0.1 or more away from camera
-    100.0f              // Only render what's 100 or less away from camera
-	);
-
-	// Kamera
-
-	this->camera_pos = glm::vec3(0.0f, 1.0f, 3.0f);
-  this->camera_from_dir = glm::normalize(camera_pos - glm::vec3(0.0f, 0.0f, 0.0f));
-	this->camera_up = glm::cross(camera_from_dir, (glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), camera_from_dir))));
-	this->camera = glm::lookAt(camera_pos, camera_from_dir, camera_up);
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CApp::proj()
-{
   this->mvp = this->projection * this->camera;
-	int matrix_id = glGetUniformLocation(this->shader_program, "mvp");
-	glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mvp[0][0]));
+	int matrix_id = 0;
+	int vec_id = 0;
+
+	glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		matrix_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, "mvp");
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mvp[0][0]));
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				vec_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, "camera");
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glUniform3f(vec_id, this->camera_pos.x, this->camera_pos.y, this->camera_pos.z);
+
+					if(glGetError() == GL_NO_ERROR)
+					{
+						glUseProgram(0);
+						
+						if(glGetError() != GL_NO_ERROR)
+							{exit_code = ERR_EN_USE_PROG;}
+					}
+				}
+				else
+					{exit_code = ERR_EN_UNIF_LOC;}
+			}
+			else
+				{exit_code = ERR_EN_MAT4F;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		glUseProgram(this->pShader[SHADER_LIGHT].prog_id);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			matrix_id = glGetUniformLocation(this->pShader[SHADER_LIGHT].prog_id, "mvp");
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mvp[0][0]));
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glUseProgram(0);
+
+					if(glGetError() != GL_NO_ERROR)
+						{exit_code = ERR_EN_USE_PROG;}
+				}
+				else
+					{exit_code = ERR_EN_MAT4F;}
+			}
+			else
+				{exit_code = ERR_EN_UNIF_LOC;}
+		}
+		else
+			{exit_code = ERR_EN_USE_PROG;}
+	}
+
+	return exit_code;
 }
 
 //------------------------------------------------------------------------
@@ -647,9 +904,20 @@ void CApp::init_debug_log(unsigned short int bytes)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CApp::rotate(unsigned short int i, float rot_speed, glm::vec3 axis)
+int CApp::rotate(int ID, float rot_speed, glm::vec3 axis)
 {
-	this->ppModel[i]->rotate(rot_speed, axis);
+	int exit_code = ERR_EN_NO_ERROR;
+	Elem_3D_Mdl * pElem = this->get_mdl_elem(ID);
+
+	if(pElem != NULL)
+	{
+		if(pElem->active == 1)
+			{pElem->pModel->rotate(rot_speed, axis);}
+	}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
 }
 
 //------------------------------------------------------------------------
@@ -724,9 +992,63 @@ int CApp::init_engine(const char * pApp_name)
 									this->write_log("<b>ENGINE:</b> glDepthFunc(GL_LEQUAL) OK", DB_MSG_OK);
 								#endif
 
-								// Lade Kamera
+								// initialisiere Stencil Buffer
 
-								this->init_camera();
+								glEnable(GL_STENCIL_TEST);
+
+								if((this->gl_err = glGetError()) == GL_NO_ERROR)
+								{
+									#if EMODE == EDEBUG_MODE
+										this->write_log("<b>ENGINE:</b> glEnable(GL_STENCIL_TEST) OK", DB_MSG_OK);
+									#endif
+
+									// Blending
+
+									glEnable(GL_BLEND);
+
+									if((this->gl_err = glGetError()) == GL_NO_ERROR)
+									{
+										#if EMODE == EDEBUG_MODE
+											this->write_log("<b>ENGINE:</b> glEnable(GL_BLEND) OK", DB_MSG_OK);
+										#endif
+
+										glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+										if((this->gl_err = glGetError()) == GL_NO_ERROR)
+										{
+											#if EMODE == EDEBUG_MODE
+												this->write_log("<b>ENGINE:</b> glBlendFunc() OK", DB_MSG_OK);
+											#endif
+										}
+										else
+										{
+											exit_code = ERR_EN_BLEND_FUNC;
+
+											#if EMODE == EDEBUG_MODE
+												sprintf(pBuffer, "<b>ENGINE:</b> glBlendFunc() ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(this->gl_err));
+												this->write_log(pBuffer, DB_MSG_ERR);
+											#endif
+										}
+									}
+									else
+									{
+										exit_code = ERR_EN_BLEND;
+
+										#if EMODE == EDEBUG_MODE
+											sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_BLEND) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(this->gl_err));
+											this->write_log(pBuffer, DB_MSG_ERR);
+										#endif
+									}
+								}
+								else
+								{
+									exit_code = ERR_EN_STENCIL_TEST;
+
+									#if EMODE == EDEBUG_MODE
+										sprintf(pBuffer, "<b>ENGINE:</b> glEnable(GL_STENCIL_TEST) ist fehlgeschlagen... FEHLERCODE: %d --end OpenGL Error: %s --end", exit_code, glewGetErrorString(this->gl_err));
+										this->write_log(pBuffer, DB_MSG_ERR);
+									#endif
+								}
 							}
 							else
 							{
@@ -786,10 +1108,16 @@ int CApp::init_engine(const char * pApp_name)
 	}
 	else
 	{
+		exit_code = ERR_EN_SDL;
+
 		#if EMODE == EDEBUG_MODE
     	this->write_log("<b>ENGINE:</b> SDL2 - Initialisierung ist fehlgeschlagen...", DB_MSG_ERR);
 		#endif
 	}
+
+	// Lade Kamera
+
+	this->init_camera();
 
 	return exit_code;
 }
@@ -811,4 +1139,893 @@ void CApp::set_camera_pos(glm::vec3 new_pos)
 	this->camera_from_dir = glm::normalize(camera_pos - glm::vec3(0.0f, 0.0f, 0.0f));
 	this->camera_up = glm::cross(camera_from_dir, (glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), camera_from_dir))));
 	this->camera = glm::lookAt(camera_pos, camera_from_dir, camera_up);
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::create_cube(int ID, float size)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+	CModel_3D * pModel = this->add_3d_mdl(ID);
+
+	if(pModel != NULL)
+		{exit_code = pModel->create_cube(size);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+  return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_mdl_pos(int ID, float x, float y, float z)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	CModel_3D * pModel = this->get_mdl(ID);
+
+	if(pModel != NULL)
+  	{pModel->set_mdl_pos(x, y, z);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::create_directional_light(unsigned int i, unsigned short int flag, short int geometry, float r, float g, float b, float a)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+  int id = 0;
+	char pBuffer[100];
+  exit_code = this->ppLight[i]->create_pointing_light(flag, geometry, r, g, b, a);
+
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			// Art des Lichtes
+
+			sprintf(pBuffer, "light[%u].light_kind", i);
+  		id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				glUniform1i(id, 1);
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glUseProgram(0);
+
+					if(glGetError() == GL_NO_ERROR)
+					{
+						// Lichtschalter
+
+						exit_code = this->switch_light(i, ON);
+					}
+					else
+						{exit_code = ERR_EN_USE_PROG;}
+				}
+				else
+					{exit_code = ERR_EN_1I;}
+			}
+			else
+				{exit_code = ERR_EN_UNIF_LOC;}
+		}
+		else
+			{exit_code = ERR_EN_USE_PROG;}
+  }
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_number_lights(unsigned int number)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+  this->number_lights = number;
+	this->ppLight = new CLight * [this->number_lights];
+	int id = 0;
+
+	for(unsigned int i = 0 ; i < this->number_lights ; i++)
+		{this->ppLight[i] = new CLight();}
+
+	glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, "number_lights");
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniform1i(id, this->number_lights);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+  			glUseProgram(0);
+
+				if(glGetError() != GL_NO_ERROR)
+					{exit_code = ERR_EN_USE_PROG;}
+			}
+			else
+				{exit_code = ERR_EN_1I;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_light_pos(unsigned int i, float x, float y, float z)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	char pBuffer[100];
+	int vec3_id = 0;
+
+	this->ppLight[i]->set_light_pos(x, y, z);	
+	glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		this->ppLight[i]->set_direction(-x, -y, -z);
+		sprintf(pBuffer, "light[%u].direction", i);
+		vec3_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniform3f(vec3_id, -x, -y, -z);
+
+			if(glGetError() != GL_NO_ERROR)
+				{exit_code = ERR_EN_3F;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		glm::vec3 light_pos = this->ppLight[i]->get_light_pos();
+		sprintf(pBuffer, "light[%u].position", i);
+		vec3_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniform3f(vec3_id, light_pos.x, light_pos.y, light_pos.z);
+
+			if(glGetError() != GL_NO_ERROR)
+				{exit_code = ERR_EN_3F;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+  }
+
+	glUseProgram(0);
+
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		if(glGetError() != GL_NO_ERROR)
+			{exit_code = ERR_EN_USE_PROG;}
+	}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::draw_light(unsigned int i)
+{
+	return ppLight[i]->draw(this->pShader[SHADER_LIGHT].prog_id);
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_material(int ID, int flag)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	CModel_3D * pModel = this->get_mdl(ID);
+
+	if(pModel != NULL)
+		{pModel->set_material(flag);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_light(unsigned int i, float ax, float ay, float az, float dx, float dy, float dz, float sx, float sy, float sz)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+	int vec3_id = 0;
+	char pBuffer[100];
+  this->ppLight[i]->set_light(ax, ay, az, dx, dy, dz, sx, sy, sz);
+
+	glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		// Lichteigentschaften
+
+		sprintf(pBuffer, "light[%u].ambient", i);
+		vec3_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniform3f(vec3_id, ax, ay, az);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				sprintf(pBuffer, "light[%u].diffuse", i);
+				vec3_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glUniform3f(vec3_id, dx, dy, dz);
+
+					if(glGetError() == GL_NO_ERROR)
+					{
+						sprintf(pBuffer, "light[%u].specular", i);
+						vec3_id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+				
+						if(glGetError() == GL_NO_ERROR)
+						{
+							glUniform3f(vec3_id, sx, sy, sz);
+
+							if(glGetError() == GL_NO_ERROR)
+							{
+								// entbinden
+
+								glUseProgram(0);
+		
+								if(glGetError() != GL_NO_ERROR)
+									{exit_code = ERR_EN_USE_PROG;}
+							}
+							else
+								{exit_code = ERR_EN_3F;}
+						}
+						else
+							{exit_code = ERR_EN_UNIF_LOC;}
+					}
+					else
+						{exit_code = ERR_EN_3F;}
+				}
+				else
+					{exit_code = ERR_EN_UNIF_LOC;}
+			}
+			else
+				{exit_code = ERR_EN_3F;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_texture_cube(int ID, const char * pFile, float repeat, int flag, int channels)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	CModel_3D * pModel = this->get_mdl(ID);
+
+	if(pModel != NULL)
+		{exit_code =  pModel->set_texture_cube(pFile, repeat, this->pShader[SHADER_MAIN].prog_id, flag, channels);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::switch_light(unsigned int i, unsigned short int value)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+	int id = 0;
+	char pBuffer[100];
+  this->ppLight[i]->switch_light(value);
+
+	// ist das Licht an oder aus?
+
+	glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		sprintf(pBuffer, "light[%u].light_switcher", i);
+  	id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniform1i(id, value);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				// entbinden
+
+				glUseProgram(0);
+
+				if(glGetError() != GL_NO_ERROR)
+					{exit_code = ERR_EN_USE_PROG;}
+			}
+			else
+				{exit_code = ERR_EN_1F;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::get_light_state(unsigned int i)
+{
+	return this->ppLight[i]->get_light_state();
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::create_pointing_light(unsigned int i, unsigned short int flag, short int geometry, float r, float g, float b, float a)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+  int id = 0;
+	char pBuffer[100];
+  exit_code = this->ppLight[i]->create_pointing_light(flag, geometry, r, g, b, a);
+
+	if(exit_code == ERR_EN_NO_ERROR)
+	{
+		glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			// Art des Lichtes
+
+			sprintf(pBuffer, "light[%u].light_kind", i);
+  		id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				glUniform1i(id, 2);
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glUseProgram(0);
+
+					if(glGetError() == GL_NO_ERROR)
+					{
+						// Lichtschalter
+
+						exit_code = this->switch_light(i, ON);
+					}
+					else
+						{exit_code = ERR_EN_USE_PROG;}
+				}
+				else
+					{exit_code = ERR_EN_1I;}
+			}
+			else
+				{exit_code = ERR_EN_UNIF_LOC;}
+		}
+		else
+			{exit_code = ERR_EN_USE_PROG;}
+  }
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_plight_dist(unsigned int i, float constant, float linear, float quadratic)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+	int id = 0;
+	char pBuffer[100];
+	this->ppLight[i]->set_plight_dist(constant, linear, quadratic);
+
+	glUseProgram(this->pShader[SHADER_MAIN].prog_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		// Konstante
+
+		sprintf(pBuffer, "light[%u].constant", i);
+  	id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glUniform1f(id, constant);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				// Linear
+
+				sprintf(pBuffer, "light[%u].linear", i);
+  			id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glUniform1f(id, linear);
+
+					if(glGetError() == GL_NO_ERROR)
+					{
+						// Quadrat
+
+						sprintf(pBuffer, "light[%u].quadratic", i);
+  					id = glGetUniformLocation(this->pShader[SHADER_MAIN].prog_id, pBuffer);
+
+						if(glGetError() == GL_NO_ERROR)
+						{
+							glUniform1f(id, quadratic);
+
+							if(glGetError() == GL_NO_ERROR)
+							{
+								// entbinden
+
+								glUseProgram(0);
+		
+								if(glGetError() != GL_NO_ERROR)
+									{exit_code = ERR_EN_USE_PROG;}
+							}
+							else
+								{exit_code = ERR_EN_1F;}
+						}
+						else
+							{exit_code = ERR_EN_UNIF_LOC;}
+					}
+					else
+						{exit_code = ERR_EN_1F;}
+				}
+				else
+					{exit_code = ERR_EN_UNIF_LOC;}
+			}
+			else
+				{exit_code = ERR_EN_1F;}
+		}
+		else
+			{exit_code = ERR_EN_UNIF_LOC;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+unsigned int CApp::get_number_lights()
+{
+	return this->number_lights;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::finish_mdl_creation(int ID)
+{
+	int exit_code = ERR_EN_NO_MEMORY;
+
+	CModel_3D * pModel = this->get_mdl(ID);
+
+	if(pModel != NULL)
+  	{pModel->finish_creation();}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::load_mdl_from_obj(int ID, const char * pPath)
+{
+	int exit_code = ERR_EN_NO_ERROR;	
+
+	CModel_3D * pModel = this->add_3d_mdl(ID);
+
+	if(pModel != NULL)
+		{exit_code = pModel->load_mdl_from_obj(pPath, this->pShader[SHADER_MAIN].prog_id);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+		
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::print_error(const char * pText, int exit_code)
+{
+	int ret = 0;
+	char pBuffer[1000];
+	pBuffer[0] = '\0';
+
+	if(exit_code != ERR_EN_NO_ERROR)
+	{
+		// Layout
+
+		const SDL_MessageBoxButtonData buttons[1] = {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Beenden"};
+		const SDL_MessageBoxColorScheme color_scheme =
+		{{ 
+			/*background*/ 				{0, 0, 0 }, 
+			/*Textcolor*/					{200, 200, 200}, 
+			/*Buttonborder*/			{220, 220, 220},
+			/*Buttonbackground*/	{30, 30, 30},
+			/*Buttonselected*/		{200, 0, 0}
+		}};
+
+		// Fehlermeldungen
+
+		if(pText != NULL)
+			{strcat(pBuffer, pText);}
+	
+		switch(exit_code)
+		{
+			case ERR_EN_OGL_DEPTHSIZE:
+			{
+				strcat(pBuffer, "SDL_GL_DEPTH_SIZE konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_MINORVERSION:
+			{
+				strcat(pBuffer, "SDL_GL_CONTEXT_MINOR_VERSION konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_MAJORVERSION:
+			{
+				strcat(pBuffer, "SDL_GL_CONTEXT_MAJOR_VERSION konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_CONTEXT_PROFILE_MASK:
+			{
+				strcat(pBuffer, "SDL_GL_CONTEXT_PROFILE_MASK konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_DOUBLEBUFFER:
+			{
+				strcat(pBuffer, "SDL_GL_DOUBLEBUFFER konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_ALPHA_SIZE:
+			{
+				strcat(pBuffer, "SDL_GL_ALPHA_SIZE konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_BLUE_SIZE:
+			{
+				strcat(pBuffer, "SDL_GL_BLUE_SIZE konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_GREEN_SIZE:
+			{
+				strcat(pBuffer, "SDL_GL_GREEN_SIZE konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_RED_SIZE:
+			{
+				strcat(pBuffer, "SDL_GL_RED_SIZE konnte nicht gesetzt werden!");
+			}	break;
+			case ERR_EN_OGL_GET_ATTR:
+			{
+				strcat(pBuffer, "Die Funktion SDL_GL_GetAttribute() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_WND_FAILED:
+			{
+				strcat(pBuffer, "Die Funktion SDL_CreateWindow() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_OGL_CONTEXT_FAILED:
+			{
+				strcat(pBuffer, "Die Funktion SDL_GL_CreateContext() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_OGL_GLEW:
+			{
+				strcat(pBuffer, "Die Funktion glewInit() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_OGL_SWAP_INTERVAL:
+			{
+				strcat(pBuffer, "Die Funktion SDL_GL_SetSwapInterval() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_FOPEN:
+			{
+				strcat(pBuffer, "Die Funktion fopen() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_ATTR:
+			{
+			strcat(pBuffer, "Die Funktion SDL_GL_GetAttribute() gibt nicht die gesetzten Werte zurück!");
+			}	break;
+			case ERR_EN_MDL_VAO:
+			{
+				strcat(pBuffer, "Die Funktion glGenVertexArrays() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MDL_BIND_VAO:
+			{
+				strcat(pBuffer, "Die Funktion glBindVertexArray() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MDL_VBO:
+			{
+				strcat(pBuffer, "Die Funktion glGenBuffers() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MDL_BIND_VBO:
+			{
+				strcat(pBuffer, "Die Funktion glBindBuffer() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MDL_VBO_DATA:
+			{
+				strcat(pBuffer, "Die Funktion glBufferData() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MDL_VAO_P:
+			{
+				strcat(pBuffer, "Die Funktion glVertexAttribPointer() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MDL_ENABLE_VAO:
+			{
+				strcat(pBuffer, "Die Funktion glEnableVertexAttribArray() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_DEPTH_FUNC:
+			{
+				strcat(pBuffer, "Die Funktion glDepthFunc() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_DEPTH_TEST:
+			{
+				strcat(pBuffer, "Die Funktion glEnable(GL_DEPTH_TEST) ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_USE_PROG:
+			{
+				strcat(pBuffer, "Die Funktion glUseProgram() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_LINK_PROG:
+			{
+				strcat(pBuffer, "Die Funktion glLinkProgram() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_SHADER_PROG:
+			{
+				strcat(pBuffer, "Die Funktion glCreateProgram() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_GEN_TEXTURE:
+			{
+				strcat(pBuffer, "Die Funktion glGenTextures() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_BIND_TEXTURE:
+			{
+				strcat(pBuffer, "Die Funktion glBindTexture() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_LOAD_IMG:
+			{
+				strcat(pBuffer, "Die Funktion SOIL_load_image() ist fehlgeschlagen!\n\n");
+				strcat(pBuffer, SOIL_last_result());
+			}	break;
+			case ERR_EN_GL_TEXTURE:
+			{
+				strcat(pBuffer, "Die Funktion glTexImage2D() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MIPMAP_TEXTURE:
+			{
+				strcat(pBuffer, "Die Funktion glGenerateMipmap() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_PARI_TEXTURE:
+			{
+				strcat(pBuffer, "Die Funktion glTexParameteri() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_CHECKLINK_PROG:
+			{
+				strcat(pBuffer, "Die Funktion glGetProgramiv() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_NO_MEM:
+			{
+			strcat(pBuffer, "Es konnte kein Speicher alloziiert werden!");
+			}	break;
+			case ERR_EN_SDL:
+			{
+				strcat(pBuffer, "SDL konnte nicht initialisiert werden!");
+			}	break;
+			case ERR_EN_STENCIL_TEST:
+			{
+				strcat(pBuffer, "Die Funktion glEnable(GL_STENCIL_TEST) ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_NO_MEMORY:
+			{
+				strcat(pBuffer, "Es existiert kein Speicherverweis (NULL)!");
+			}	break;
+			case ERR_EN_ACTIVE_TEX:
+			{
+				strcat(pBuffer, "Die Funktion glActiveTexture() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_UNIF_LOC:
+			{
+				strcat(pBuffer, "Die Funktion glGetUniformLocation() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_MAT4F:
+			{
+				strcat(pBuffer, "Die Funktion glUniformMatrix4fv() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_DRAW_ARR:
+			{
+				strcat(pBuffer, "Die Funktion glDrawArrays() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_1F:
+			{
+				strcat(pBuffer, "Die Funktion glUniform1f() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_2DTEX:
+			{
+				strcat(pBuffer, "Die Funktion glEnable(GL_TEXTURE_2D) ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_1I:
+			{
+				strcat(pBuffer, "Die Funktion glUniform1i() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_3F:
+			{
+				strcat(pBuffer, "Die Funktion glUniform3f() ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_BLEND:
+			{
+				strcat(pBuffer, "Die Funktion glEnable(GL_BLEND) ist fehlgeschlagen!");
+			}	break;
+			case ERR_EN_BLEND_FUNC:
+			{
+				strcat(pBuffer, "Die Funktion glBlendFunc() ist fehlgeschlagen!");
+			}	break;
+		};
+
+		const SDL_MessageBoxData mb_data = 
+		{
+		  SDL_MESSAGEBOX_ERROR,
+  	  this->pWindow,
+  	  "FEHLER", /* .title */
+  	  pBuffer,
+  	  SDL_arraysize(buttons),
+  	  buttons,
+  	  &color_scheme
+  	};
+
+		int id = 0;
+		SDL_ShowMessageBox(&mb_data, &id);
+
+		switch(id)
+		{
+			case 0:
+			{
+				ret = 1;
+			} break;;
+		};
+	}
+
+	return ret;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::create_square(int ID, float size)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	CModel_3D * pModel = this->add_3d_mdl(ID);
+
+	if(pModel != NULL)
+  	{exit_code = pModel->create_square(size);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_texture_square(int ID, const char * pFile, float repeat, int flag, int channels)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+	CModel_3D * pModel = this->get_mdl(ID);
+
+	if(pModel != NULL)
+  	{exit_code = pModel->set_texture_square(pFile, repeat, this->pShader[SHADER_MAIN].prog_id, flag, channels);}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+unsigned int CApp::get_number_models()
+{
+	Elem_3D_Mdl * pCurrent = this->p3DModel_Head->pRight;
+	unsigned int number = 0;
+
+	while(pCurrent != this->p3DModel_Head)
+	{
+		number++;
+		pCurrent = pCurrent->pRight;
+	}
+
+	return number;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CApp::delete_3d_mdl(int ID)
+{
+  Elem_3D_Mdl * pCurrent = this->p3DModel_Head->pRight;
+
+	while(pCurrent->ID != ID)
+		{pCurrent = pCurrent->pRight;}
+
+	// gefunden?
+
+	if(pCurrent->ID == ID)
+	{
+		// neu verlinken
+
+		pCurrent->pLeft->pRight = pCurrent->pRight;
+		pCurrent->pRight->pLeft = pCurrent->pLeft;
+
+		// löschen / GPU nicht vergessen!
+
+		delete pCurrent->pModel;
+		delete pCurrent;
+	}
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_mdl_active(int ID)
+{
+  int exit_code = ERR_EN_NO_ERROR;
+	Elem_3D_Mdl * pElem = this->get_mdl_elem(ID);
+
+	if(pElem != NULL)
+		{pElem->active = 1;}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CApp::set_mdl_inactive(int ID)
+{
+  int exit_code = ERR_EN_NO_ERROR;
+	Elem_3D_Mdl * pElem = this->get_mdl_elem(ID);
+
+	if(pElem != NULL)
+		{pElem->active = 0;}
+	else
+		{exit_code = ERR_EN_NO_MEMORY;}
+
+	return exit_code;
 }

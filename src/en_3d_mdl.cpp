@@ -10,16 +10,21 @@ CModel_3D::CModel_3D():
 current_pos_ver(0),
 number_vertexes(0),
 id_vao(0),
-current_col_ver(0),
-id_texture(0),
-texture_set(0),
+id_diff_texture(0),
+id_spec_texture(0),
+diff_texture_set(0),
+spec_texture_set(0),
 draw_mode(GL_TRIANGLE_FAN),
-create_flag(0)
+current_norm_vec(0),
+material_flag(0),
+uv_set(0),
+shine_intensity(0.0f),
+current_uv(0)
 {
 	this->pPos_Vertex = NULL;
 	this->pVBO = new unsigned int[NUMBER_VBO];
-	this->pCol_Vertex = NULL;
 	this->pTex_Pos = NULL;
+	this->pNorm_Vec = NULL;
 }
 
 //------------------------------------------------------------------------
@@ -27,31 +32,53 @@ create_flag(0)
 
 CModel_3D::~CModel_3D()
 {
-	if(pTex_Pos != NULL)
-		{delete [] pTex_Pos;}
+	if(this->pTex_Pos != NULL)
+		{delete [] this->pTex_Pos;}
 
-	if(pCol_Vertex != NULL)
-		{delete [] pCol_Vertex;}
+  if(this->pPos_Vertex != NULL)
+		{delete [] this->pPos_Vertex;}
 
-	delete [] pVBO;
-	
-	if(pCol_Vertex != NULL)
-		{delete [] pPos_Vertex;}
+	if(this->pNorm_Vec != NULL)
+		{delete [] this->pNorm_Vec;}
+
+	delete [] pVBO;	
 }
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
-// public methods
+// private Methoden
 ///////////////////////////////////////////
 ///////////////////////////////////////////
+
+int CModel_3D::send_material(int shader_program_id)
+{
+	int exit_code = ERR_EN_NO_ERROR;
+
+  int vec_id = 0;
+	vec_id = glGetUniformLocation(shader_program_id, "material.shine");
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		glUniform1f(vec_id, this->shine_intensity);
+
+		if(glGetError() != GL_NO_ERROR)
+			{exit_code = ERR_EN_1F;}
+	}
+	else
+		{exit_code = ERR_EN_UNIF_LOC;}
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
 
 void CModel_3D::init_vertexes(unsigned int number)
 {
   this->number_vertexes = number;
-  this->pPos_Vertex = new VEC3[this->number_vertexes];
-
-	if(this->create_flag == MDL_COLOR)
-		{this->pCol_Vertex = new VEC4[this->number_vertexes];}
+  this->pPos_Vertex = new glm::vec3[this->number_vertexes];
+	this->pNorm_Vec = new glm::vec3[this->number_vertexes];
+	this->pTex_Pos = new glm::vec2[this->number_vertexes];
 }
 
 //------------------------------------------------------------------------
@@ -63,6 +90,27 @@ void CModel_3D::add_vertex_pos(float x, float y, float z)
 	this->pPos_Vertex[this->current_pos_ver].y = y;
 	this->pPos_Vertex[this->current_pos_ver].z = z;
   this->current_pos_ver++;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CModel_3D::add_normal_vec(float x, float y, float z)
+{
+	this->pNorm_Vec[this->current_norm_vec].x = x;
+	this->pNorm_Vec[this->current_norm_vec].y = y;
+	this->pNorm_Vec[this->current_norm_vec].z = z;
+  this->current_norm_vec++;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+void CModel_3D::add_uv(float x, float y)
+{
+	this->pTex_Pos[this->current_uv].x = x;
+	this->pTex_Pos[this->current_uv].y = y;
+  this->current_uv++;
 }
 
 //------------------------------------------------------------------------
@@ -82,17 +130,17 @@ int CModel_3D::create_model()
 		
 		if(glGetError() == GL_NO_ERROR)
 		{
-  		glGenBuffers(NUMBER_VBO, pVBO);
+  		glGenBuffers(NUMBER_VBO, this->pVBO);
 
 			if(glGetError() == GL_NO_ERROR)
 			{
 				// Positionen
 
-				glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[0]);
+				glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[INDEX_POS]);
 
 				if(glGetError() == GL_NO_ERROR)
 				{
-					glBufferData(GL_ARRAY_BUFFER, (sizeof(VEC3) * this->number_vertexes), pPos_Vertex, GL_STATIC_DRAW);
+					glBufferData(GL_ARRAY_BUFFER, (sizeof(glm::vec3) * this->number_vertexes), this->pPos_Vertex, GL_STATIC_DRAW);
 
 					if(glGetError() == GL_NO_ERROR)
 					{
@@ -104,30 +152,26 @@ int CModel_3D::create_model()
 							
 							if(glGetError() == GL_NO_ERROR)
 							{
-								// Farben
-								// =================================================>
-
-								if(this->create_flag == MDL_COLOR)
+								// Normalvektor
+								
+								if(exit_code == ERR_EN_NO_ERROR)
 								{
-									glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[1]);
+									glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[INDEX_NORMAL]);
 								
 									if(glGetError() == GL_NO_ERROR)
 									{
-										glBufferData(GL_ARRAY_BUFFER, (sizeof(VEC4) * this->number_vertexes), pCol_Vertex, GL_STATIC_DRAW);
+										glBufferData(GL_ARRAY_BUFFER, (sizeof(glm::vec3) * this->number_vertexes), this->pNorm_Vec, GL_STATIC_DRAW);
 
 										if(glGetError() == GL_NO_ERROR)
 										{
-											glVertexAttribPointer(INDEX_COLOR, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+											glVertexAttribPointer(INDEX_NORMAL, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
 											if(glGetError() == GL_NO_ERROR)
 											{
-	  										glEnableVertexAttribArray(INDEX_COLOR);
+	  										glEnableVertexAttribArray(INDEX_NORMAL);
 								
 												if(glGetError() != GL_NO_ERROR)
-													{exit_code = ERR_EN_MDL_ENABLE_VAO;}
-												
-												delete [] pCol_Vertex;
-												pCol_Vertex = NULL;
+													{exit_code = ERR_EN_MDL_ENABLE_VAO;}										
 											}
 											else
 												{exit_code = ERR_EN_MDL_VAO_P;}
@@ -137,14 +181,14 @@ int CModel_3D::create_model()
 									}
 									else
 										{exit_code = ERR_EN_MDL_BIND_VBO;}
-								}
-
-								// =================================================>
-
+								}								
+		
 								// Speicher bereinigen
 	
-								delete [] pPos_Vertex;
-								pPos_Vertex = NULL;
+								delete [] this->pNorm_Vec;
+								this->pNorm_Vec = NULL;
+								delete [] this->pPos_Vertex;
+								this->pPos_Vertex = NULL;
 							}
 							else
 								{exit_code = ERR_EN_MDL_ENABLE_VAO;}
@@ -173,41 +217,290 @@ int CModel_3D::create_model()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::add_vertex_col(float r, float g, float b, float a)
+int CModel_3D::set_texture(const char * pFile, int shader_program_id, int flag, int channels)
 {
-	this->pCol_Vertex[this->current_col_ver].r = r;
-	this->pCol_Vertex[this->current_col_ver].g = g;
-	this->pCol_Vertex[this->current_col_ver].b = b;
-  this->pCol_Vertex[this->current_col_ver].a = a;
-  this->current_col_ver++;
+  int exit_code = ERR_EN_NO_ERROR;
+	int width = 0;
+	int height = 0;
+	unsigned char * pData = NULL;
+
+	// Aktiviere material struct
+		
+	glUseProgram(shader_program_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		glBindVertexArray(this->id_vao);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			glEnable(GL_TEXTURE_2D);
+
+			if(glGetError() == GL_NO_ERROR)
+			{
+				// generiere Textur
+
+				if(flag == TEXTURE_DIFFUSE)
+					{glGenTextures(1, &(this->id_diff_texture));}
+				if(flag == TEXTURE_SPECULAR)
+					{glGenTextures(1, &(this->id_spec_texture));}
+
+				if(glGetError() != GL_NO_ERROR)
+					{exit_code = ERR_EN_GEN_TEXTURE;}
+			}
+			else
+				{exit_code = ERR_EN_2DTEX;}
+		}
+		else
+			{exit_code = ERR_EN_MDL_BIND_VAO;}
+  }
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+  if(exit_code == ERR_EN_NO_ERROR)
+	{
+		if(flag == TEXTURE_DIFFUSE)
+			{glBindTexture(GL_TEXTURE_2D, this->id_diff_texture);}
+		if(flag == TEXTURE_SPECULAR)
+			{glBindTexture(GL_TEXTURE_2D, this->id_spec_texture);}
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			// Lade Textur
+			
+			if(channels == GL_RGB)
+      	{pData = SOIL_load_image(pFile, &width, &height, NULL, SOIL_LOAD_RGB);}
+			if(channels == GL_RGBA)
+      	{pData = SOIL_load_image(pFile, &width, &height, NULL, SOIL_LOAD_RGBA);}
+
+			if(pData != NULL)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, channels, width, height, 0, channels, GL_UNSIGNED_BYTE, pData);
+
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+					if(glGetError() == GL_NO_ERROR)
+					{
+     				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+						if(glGetError() == GL_NO_ERROR)
+						{
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+							if(glGetError() == GL_NO_ERROR)
+							{
+ 								glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+								
+								if(glGetError() != GL_NO_ERROR)
+									{exit_code = ERR_EN_PARI_TEXTURE;}
+							}
+							else
+								{exit_code = ERR_EN_PARI_TEXTURE;}
+						}
+						else
+							{exit_code = ERR_EN_PARI_TEXTURE;}
+					}
+					else
+						{exit_code = ERR_EN_PARI_TEXTURE;}
+					
+					if(exit_code == ERR_EN_NO_ERROR)
+					{
+						glGenerateMipmap(GL_TEXTURE_2D);
+
+						if(glGetError() == GL_NO_ERROR)
+						{
+							// Speicher bereinigen
+
+							SOIL_free_image_data(pData);
+
+							if(!this->uv_set)
+							{
+								// Lege Texturkoordinaten fest
+
+								glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[INDEX_UV]);
+				
+								if(glGetError() == GL_NO_ERROR)
+								{
+									glBufferData(GL_ARRAY_BUFFER, (sizeof(glm::vec2) * this->number_vertexes), this->pTex_Pos, GL_STATIC_DRAW);
+
+									if(glGetError() == GL_NO_ERROR)
+									{									
+										glVertexAttribPointer(INDEX_UV, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	
+										if(glGetError() == GL_NO_ERROR)
+										{
+											glEnableVertexAttribArray(INDEX_UV); 
+											this->uv_set = 1;												
+
+											if(glGetError() != GL_NO_ERROR)
+												{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
+										}
+										else
+											{exit_code = ERR_EN_MDL_VAO_P;}
+									}
+									else
+										{exit_code = ERR_EN_MDL_VBO_DATA;}
+								}
+								else
+									{exit_code = ERR_EN_MDL_BIND_VBO;}
+							}
+
+							switch(flag)
+							{
+								case TEXTURE_DIFFUSE:
+								{
+									this->diff_texture_set = 1;
+									glUniform1i(glGetUniformLocation(shader_program_id, "material.diffuse"), 0);
+								} break;
+								case TEXTURE_SPECULAR:
+								{
+									this->spec_texture_set = 1;
+									glUniform1i(glGetUniformLocation(shader_program_id, "material.specular"), 1);
+								} break;
+							};
+
+							if(glGetError() != GL_NO_ERROR)
+								{exit_code = ERR_EN_1I;}
+						}	
+						else
+							{exit_code = ERR_EN_MIPMAP_TEXTURE;}
+					}
+				}
+				else
+					{exit_code = ERR_EN_GL_TEXTURE;}
+			}
+			else
+				{exit_code = ERR_EN_LOAD_IMG;}
+		}
+		else
+			{exit_code = ERR_EN_BIND_TEXTURE;}
+	}
+
+	return exit_code;
 }
 
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
+///////////////////////////////////////////
+///////////////////////////////////////////
+// public Methoden
+///////////////////////////////////////////
+///////////////////////////////////////////
 
-void CModel_3D::draw(int shader_program_id)
+int CModel_3D::draw(int shader_program_id)
 {
-	glBindVertexArray(this->id_vao);
+	int exit_code = ERR_EN_NO_ERROR;
 
-	// Textur
+	glUseProgram(shader_program_id);
+
+	if(glGetError() == GL_NO_ERROR)
+	{
+		glBindVertexArray(this->id_vao);
+
+		if(glGetError() == GL_NO_ERROR)
+		{
+			// Textur
 	
-	if(this->texture_set)
-		{glBindTexture(GL_TEXTURE_2D, this->id_texture);}
+			if(this->diff_texture_set)
+			{
+				glActiveTexture(GL_TEXTURE0);
 
-	// richtige Position
+				if(glGetError() == GL_NO_ERROR)
+				{
+					glBindTexture(GL_TEXTURE_2D, this->id_diff_texture);
 
-	int matrix_id = glGetUniformLocation(shader_program_id, "model");
-	glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mdl[0][0]));
+					if(glGetError() != GL_NO_ERROR)
+						{exit_code = ERR_EN_BIND_TEXTURE;}
+				}
+				else
+					{exit_code = ERR_EN_ACTIVE_TEX;}
+			}
+	
+			if(exit_code == ERR_EN_NO_ERROR)
+			{
+				if(this->spec_texture_set)
+				{
+					glActiveTexture(GL_TEXTURE1);
+					
+					if(glGetError() == GL_NO_ERROR)
+					{
+						glBindTexture(GL_TEXTURE_2D, this->id_spec_texture);
 
-	// Zeichnen
+						if(glGetError() != GL_NO_ERROR)
+							{exit_code = ERR_EN_BIND_TEXTURE;}
+					}
+					else
+						{exit_code = ERR_EN_ACTIVE_TEX;}
+				}
 
-	glDrawArrays(this->draw_mode, 0, this->number_vertexes);
+				if(exit_code == ERR_EN_NO_ERROR)
+				{
+					// richtige Position
+	
+					int matrix_id = glGetUniformLocation(shader_program_id, "model");
 
-	// unbind
+					if(glGetError() == GL_NO_ERROR)
+					{
+						glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &(this->mdl[0][0]));
 
-	glBindVertexArray(0);
-	if(texture_set)
-		{glBindTexture(GL_TEXTURE_2D, 0);}
+						if(glGetError() == GL_NO_ERROR)
+						{
+							// Material
+
+							exit_code = this->send_material(shader_program_id);
+
+							if(exit_code == ERR_EN_NO_ERROR)
+							{
+								// Zeichnen
+
+								glDrawArrays(this->draw_mode, 0, this->number_vertexes);
+
+								if(glGetError() == GL_NO_ERROR)
+								{
+									// unbind
+
+									glBindVertexArray(0);
+
+									if(glGetError() == GL_NO_ERROR)
+									{		
+										if(this->diff_texture_set)
+										{
+											glBindTexture(GL_TEXTURE_2D, 0);
+											
+											if(glGetError() != GL_NO_ERROR)
+												{exit_code = ERR_EN_BIND_TEXTURE;}
+										}
+	
+										if(exit_code == ERR_EN_NO_ERROR)
+										{
+											glUseProgram(0);
+
+											if(glGetError() != GL_NO_ERROR)
+												{exit_code = ERR_EN_USE_PROG;}
+										}
+									}
+									else
+										{exit_code = ERR_EN_MDL_BIND_VAO;}
+								}
+								else
+									{exit_code = ERR_EN_DRAW_ARR;}
+							}
+						}
+						else
+							{exit_code = ERR_EN_MAT4F;}
+					}
+					else
+						{exit_code = ERR_EN_UNIF_LOC;}
+				}
+			}
+		}
+		else
+			{exit_code = ERR_EN_MDL_BIND_VAO;}
+	}
+	else
+		{exit_code = ERR_EN_USE_PROG;}
+
+	return exit_code;
 }
 
 //------------------------------------------------------------------------
@@ -229,70 +522,59 @@ void CModel_3D::set_mdl_pos(float x, float y, float z)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_cube(float size, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha, short int flag)
+int CModel_3D::create_cube(float size)
 {
-	this->create_flag = flag;
+	int exit_code = ERR_EN_NO_ERROR;
   this->init_vertexes(CUBE_VERT);
 
-	float r = (float)((float) red / (float) 255);
-	float g = (float)((float) green / (float) 255);
-	float b = (float)((float) blue / (float) 255);
-	float a = (float)((float) alpha / (float) 255);
+	// Positionen / Normalvektoren
 
-	// Positionen
-
-	this->add_vertex_pos(-size, -size, -size);			// BACK
-	this->add_vertex_pos(size, -size, -size);	
-	this->add_vertex_pos(-size, size, -size);		
-  this->add_vertex_pos(size, -size, -size);		
-	this->add_vertex_pos(size, size, -size);			
-	this->add_vertex_pos(-size, size, -size);				
-  this->add_vertex_pos(-size, -size, -size);			// LEFT
-	this->add_vertex_pos(-size, -size, size);		
-	this->add_vertex_pos(-size, size, size);	
-  this->add_vertex_pos(-size, size, size);	
-	this->add_vertex_pos(-size, size, -size);	
-	this->add_vertex_pos(-size, -size, -size);	
-  this->add_vertex_pos(-size, -size, -size);			// FLOOR
-	this->add_vertex_pos(-size, -size, size);			
-  this->add_vertex_pos(size, -size, size);		
-  this->add_vertex_pos(-size, -size, -size);		
-  this->add_vertex_pos(size, -size, -size);		
-  this->add_vertex_pos(size, -size, size);		
-  this->add_vertex_pos(size, -size, size);				// RIGHT
-  this->add_vertex_pos(size, -size, -size);
-  this->add_vertex_pos(size, size, size);				
-  this->add_vertex_pos(size, -size, -size);			
-  this->add_vertex_pos(size, size, -size);		
-  this->add_vertex_pos(size, size, size);				
-  this->add_vertex_pos(size, -size, size);				// FRONT right bottom
-  this->add_vertex_pos(-size, -size, size);				// FRONT left bottom
-  this->add_vertex_pos(-size, size, size);				// FRONT left top
-  this->add_vertex_pos(-size, size, size);				// FRONT left top
-  this->add_vertex_pos(size, size, size);					// FRONT right top
-  this->add_vertex_pos(size, -size, size);				// FRONT right bottom
-  this->add_vertex_pos(-size, size, -size);				// TOP
-	this->add_vertex_pos(-size, size, size);		
-  this->add_vertex_pos(size, size, size);			
-  this->add_vertex_pos(-size, size, -size);		
-	this->add_vertex_pos(size, size, -size);			
-  this->add_vertex_pos(size, size, size);				
+	this->add_vertex_pos(-size, -size, -size);		this->add_normal_vec(0.0f, 0.0f, -1.0f);		// BACK
+	this->add_vertex_pos(size, -size, -size);			this->add_normal_vec(0.0f, 0.0f, -1.0f);
+	this->add_vertex_pos(-size, size, -size);			this->add_normal_vec(0.0f, 0.0f, -1.0f);
+  this->add_vertex_pos(size, -size, -size);			this->add_normal_vec(0.0f, 0.0f, -1.0f);
+	this->add_vertex_pos(size, size, -size);			this->add_normal_vec(0.0f, 0.0f, -1.0f);
+	this->add_vertex_pos(-size, size, -size);			this->add_normal_vec(0.0f, 0.0f, -1.0f);
+  this->add_vertex_pos(-size, -size, -size);		this->add_normal_vec(-1.0f, 0.0f, 0.0f);		// LEFT
+	this->add_vertex_pos(-size, -size, size);			this->add_normal_vec(-1.0f, 0.0f, 0.0f);
+	this->add_vertex_pos(-size, size, size);			this->add_normal_vec(-1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(-size, size, size);			this->add_normal_vec(-1.0f, 0.0f, 0.0f);
+	this->add_vertex_pos(-size, size, -size);			this->add_normal_vec(-1.0f, 0.0f, 0.0f);
+	this->add_vertex_pos(-size, -size, -size);		this->add_normal_vec(-1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(-size, -size, -size);		this->add_normal_vec(0.0f, -1.0f, 0.0f);		// FLOOR
+	this->add_vertex_pos(-size, -size, size);			this->add_normal_vec(0.0f, -1.0f, 0.0f);
+  this->add_vertex_pos(size, -size, size);			this->add_normal_vec(0.0f, -1.0f, 0.0f);
+  this->add_vertex_pos(-size, -size, -size);		this->add_normal_vec(0.0f, -1.0f, 0.0f);
+  this->add_vertex_pos(size, -size, -size);			this->add_normal_vec(0.0f, -1.0f, 0.0f);
+  this->add_vertex_pos(size, -size, size);			this->add_normal_vec(0.0f, -1.0f, 0.0f);
+  this->add_vertex_pos(size, -size, size);			this->add_normal_vec(1.0f, 0.0f, 0.0f);			// RIGHT
+  this->add_vertex_pos(size, -size, -size);			this->add_normal_vec(1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(size, size, size);				this->add_normal_vec(1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(size, -size, -size);			this->add_normal_vec(1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(size, size, -size);			this->add_normal_vec(1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(size, size, size);				this->add_normal_vec(1.0f, 0.0f, 0.0f);
+  this->add_vertex_pos(size, -size, size);			this->add_normal_vec(0.0f, 0.0f, 1.0f);			// FRONT
+  this->add_vertex_pos(-size, -size, size);			this->add_normal_vec(0.0f, 0.0f, 1.0f);		
+  this->add_vertex_pos(-size, size, size);			this->add_normal_vec(0.0f, 0.0f, 1.0f);
+  this->add_vertex_pos(-size, size, size);			this->add_normal_vec(0.0f, 0.0f, 1.0f);
+  this->add_vertex_pos(size, size, size);				this->add_normal_vec(0.0f, 0.0f, 1.0f);
+  this->add_vertex_pos(size, -size, size);			this->add_normal_vec(0.0f, 0.0f, 1.0f);
+  this->add_vertex_pos(-size, size, -size);			this->add_normal_vec(0.0f, 1.0f, 0.0f);			// TOP 
+	this->add_vertex_pos(-size, size, size);			this->add_normal_vec(0.0f, 1.0f, 0.0f);
+  this->add_vertex_pos(size, size, size);				this->add_normal_vec(0.0f, 1.0f, 0.0f);
+  this->add_vertex_pos(-size, size, -size);			this->add_normal_vec(0.0f, 1.0f, 0.0f);
+	this->add_vertex_pos(size, size, -size);			this->add_normal_vec(0.0f, 1.0f, 0.0f);
+  this->add_vertex_pos(size, size, size);				this->add_normal_vec(0.0f, 1.0f, 0.0f);
 
 	// Zeichen Modus
 
 	this->draw_mode = GL_TRIANGLES;
-
-	// Farben
-
-	if(this->create_flag == MDL_COLOR)
-	{
-		for(int i = 0 ; i < CUBE_VERT ; i++)
-			{this->add_vertex_col(r, g, b, a);}
-	}
 	
 	// Model erstellen
 
-	this->create_model();
+	exit_code = this->create_model();
+
+	return exit_code;
 }
 
 //------------------------------------------------------------------------
@@ -306,129 +588,56 @@ void CModel_3D::rotate(float rot_speed, glm::vec3 axis)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-int CModel_3D::set_texture_cube(const char * pFile)
+int CModel_3D::set_texture_cube(const char * pFile, float repeat, int shader_program_id, int flag, int channels)
 {
-  int exit_code = ERR_EN_NO_ERROR;
-	int width = 0;
-	int height = 0;
-	BMP * pBmp = NULL;
+  int exit_code = ERR_EN_NO_ERROR;	
 
-	glBindVertexArray(this->id_vao);
-
-	// generiere Textur
-
-	glGenTextures(1, &(this->id_texture));
-
-  if(glGetError() == GL_NO_ERROR)
+	if(!this->uv_set)
 	{
-		glBindTexture(GL_TEXTURE_2D, this->id_texture);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);		// BACK
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
 
-		if(glGetError() == GL_NO_ERROR)
-		{
-			// Lade Textur
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);		// LEFT
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);
 
-      pBmp = load_bmp(pFile);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);		// FLOOR
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
 
-			if(pBmp != NULL)
-			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pBmp);
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);		// RIGHT
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
 
-				if(glGetError() == GL_NO_ERROR)
-				{
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
- 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-					
-					if(glGetError() == GL_NO_ERROR)
-					{
-						glGenerateMipmap(GL_TEXTURE_2D);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);		// FRONT
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
 
-						if(glGetError() == GL_NO_ERROR)
-						{
-							// Speicher bereinigen
-
-							delete pBmp;
-
-							// Lege Texturkoordinaten fest
-
-							this->pTex_Pos = new Point[this->number_vertexes];
-
-							if(this->pTex_Pos != NULL)
-							{
-								pTex_Pos[0].x = 0.0f;		pTex_Pos[0].y = 0.0f;		// BACK
-								pTex_Pos[1].x = 0.0f; 	pTex_Pos[1].y = 0.0f;
-								pTex_Pos[2].x = 0.0f;		pTex_Pos[2].y = 0.0f;
-								pTex_Pos[3].x = 0.0f; 	pTex_Pos[3].y = 0.0f;
-								pTex_Pos[4].x = 0.0f; 	pTex_Pos[4].y = 0.0f;
-								pTex_Pos[5].x = 0.0f; 	pTex_Pos[5].y = 0.0f;
-
-								pTex_Pos[6].x = 0.0f;		pTex_Pos[6].y = 0.0f;		// LEFT
-								pTex_Pos[7].x = 0.0f; 	pTex_Pos[7].y = 0.0f;
-								pTex_Pos[8].x = 0.0f;		pTex_Pos[8].y = 0.0f;
-								pTex_Pos[9].x = 0.0f; 	pTex_Pos[9].y = 0.0f;
-								pTex_Pos[10].x = 0.0f; 	pTex_Pos[10].y = 0.0f;
-								pTex_Pos[11].x = 0.0f; 	pTex_Pos[11].y = 0.0f;
-
-								pTex_Pos[12].x = 0.0f;	pTex_Pos[12].y = 0.0f;	// FLOOR
-								pTex_Pos[13].x = 0.0f; 	pTex_Pos[13].y = 0.0f;
-								pTex_Pos[14].x = 0.0f;	pTex_Pos[14].y = 0.0f;
-								pTex_Pos[15].x = 0.0f; 	pTex_Pos[15].y = 0.0f;
-								pTex_Pos[16].x = 0.0f; 	pTex_Pos[16].y = 0.0f;
-								pTex_Pos[17].x = 0.0f; 	pTex_Pos[17].y = 0.0f;
-
-								pTex_Pos[18].x = 0.0f;	pTex_Pos[18].y = 0.0f;	// RIGHT
-								pTex_Pos[19].x = 0.0f; 	pTex_Pos[19].y = 0.0f;
-								pTex_Pos[20].x = 0.0f;	pTex_Pos[20].y = 0.0f;
-								pTex_Pos[21].x = 0.0f; 	pTex_Pos[21].y = 0.0f;
-								pTex_Pos[22].x = 0.0f; 	pTex_Pos[22].y = 0.0f;
-								pTex_Pos[23].x = 0.0f; 	pTex_Pos[23].y = 0.0f;
-
-								pTex_Pos[24].x = 1.0f;	pTex_Pos[24].y = 0.0f;	// FRONT
-								pTex_Pos[25].x = 0.0f; 	pTex_Pos[25].y = 0.0f;
-								pTex_Pos[26].x = 0.0f;	pTex_Pos[26].y = 1.0f;
-								pTex_Pos[27].x = 0.0f; 	pTex_Pos[27].y = 1.0f;
-								pTex_Pos[28].x = 1.0f; 	pTex_Pos[28].y = 1.0f;
-								pTex_Pos[29].x = 1.0f; 	pTex_Pos[29].y = 0.0f;
-
-								pTex_Pos[30].x = 0.0f;	pTex_Pos[30].y = 0.0f;	// TOP
-								pTex_Pos[31].x = 0.0f; 	pTex_Pos[31].y = 0.0f;
-								pTex_Pos[32].x = 0.0f;	pTex_Pos[32].y = 0.0f;
-								pTex_Pos[33].x = 0.0f; 	pTex_Pos[33].y = 0.0f;
-								pTex_Pos[34].x = 0.0f; 	pTex_Pos[34].y = 0.0f;
-								pTex_Pos[35].x = 0.0f; 	pTex_Pos[35].y = 0.0f;
-
-								glVertexAttribPointer(INDEX_UV, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-								if(glGetError() == GL_NO_ERROR)
-								{
-									glEnableVertexAttribArray(INDEX_UV); 
-									this->texture_set = 1;
-
-									if(glGetError() != GL_NO_ERROR)
-										{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
-								}
-								else
-									{exit_code = ERR_EN_MDL_VAO_P;}
-							}
-							else
-								{exit_code = ERR_EN_MEM_TEXTURE;}
-						}	
-						else
-							{exit_code = ERR_EN_MIPMAP_TEXTURE;}
-					}
-					else
-						{exit_code = ERR_EN_PAR_TEXTURE;}
-				}
-				else
-					{exit_code = ERR_EN_GL_TEXTURE;}
-			}
-			else
-				{exit_code = ERR_EN_LOAD_TEXTURE;}
-		}
-		else
-			{exit_code = ERR_EN_BIND_TEXTURE;}
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);		// TOP
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);
 	}
-	else
-		{exit_code = ERR_EN_GEN_TEXTURE;}
+
+	exit_code = this->set_texture(pFile, shader_program_id, flag, channels);
 
 	return exit_code;
 }
@@ -436,147 +645,32 @@ int CModel_3D::set_texture_cube(const char * pFile)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_square(float size, uint8_t red, uint8_t green, uint8_t blue, short int flag)
+int CModel_3D::create_square(float size)
 {
-  this->create_flag = flag;
+	int exit_code = ERR_EN_NO_ERROR;
 	this->init_vertexes(SQUARE_VERT);
-
-	float r = (float)((float) red / (float) 255);
-	float g = (float)((float) green / (float) 255);
-	float b = (float)((float) blue / (float) 255);
 
 	// Positionen
 		
-	this->add_vertex_pos(-size, -size, size);				// FRONT left bottom
-	this->add_vertex_pos(-size, size, size);				// FRONT left top
-  this->add_vertex_pos(size, -size, size);				// FRONT right bottom
-	this->add_vertex_pos(size, size, size);					// FRONT right top
+	this->add_vertex_pos(-size, -size, 0.0f);				// FRONT left bottom
+	this->add_vertex_pos(size, -size, 0.0f);				// FRONT right bottom
+	this->add_vertex_pos(-size, size, 0.0f);				// FRONT left top
+	this->add_vertex_pos(size, -size, 0.0f);				// FRONT right bottom
+	this->add_vertex_pos(-size, size, 0.0f);				// FRONT left top
+	this->add_vertex_pos(size, size, 0.0f);					// FRONT right top
 
-	// Farben
+	// Normal Vektoren
 
-	if(this->create_flag == MDL_COLOR)
-	{
-		for(int i = 0 ; i < SQUARE_VERT ; i++)
-			{this->add_vertex_col(r, g, b, 1.0f);}
-  }
+	for(int i = 0 ; i < SQUARE_VERT ; i++)
+		{this->add_normal_vec(0.0f, 0.0f, 1.0f);}
 
 	// Zeichen Modus
 
-	this->draw_mode = GL_TRIANGLE_STRIP;
+	this->draw_mode = GL_TRIANGLES;
 
 	// Model erstellen
 
-	this->create_model();
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-int CModel_3D::set_texture_square(const char * pFile)
-{
-  int exit_code = ERR_EN_NO_ERROR;
-	unsigned char * pData = NULL;
-	int width = 0;
-	int height = 0;
-
-	glBindVertexArray(this->id_vao);
-	glEnable(GL_TEXTURE_2D);
-
-	// generiere Textur
-
-	glGenTextures(1, &(this->id_texture));
-
-  if(glGetError() == GL_NO_ERROR)
-	{
-		glBindTexture(GL_TEXTURE_2D, this->id_texture);
-
-		if(glGetError() == GL_NO_ERROR)
-		{
-			// Lade Textur
-
-      pData = SOIL_load_image(pFile, &width, &height, 0, SOIL_LOAD_RGB);
-
-			if(pData != NULL)
-			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pData);
-
-				if(glGetError() == GL_NO_ERROR)
-				{
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-     			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
- 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-					
-					if(glGetError() == GL_NO_ERROR)
-					{
-						glGenerateMipmap(GL_TEXTURE_2D);
-
-						if(glGetError() == GL_NO_ERROR)
-						{
-							// Speicher bereinigen
-
-							SOIL_free_image_data(pData);								
-
-							// Lege Texturkoordinaten fest
-
-							this->pTex_Pos = new Point[this->number_vertexes];
-
-							if(this->pTex_Pos != NULL)
-							{
-								glBindBuffer(GL_ARRAY_BUFFER, this->pVBO[2]);
-				
-								if(glGetError() == GL_NO_ERROR)
-								{
-									pTex_Pos[0].x = 0.0f;	pTex_Pos[0].y = 0.0f;	// FRONT
-									pTex_Pos[1].x = 0.0f; pTex_Pos[1].y = 1.0f;
-									pTex_Pos[2].x = 1.0f;	pTex_Pos[2].y = 0.0f;
-									pTex_Pos[3].x = 1.0f; pTex_Pos[3].y = 1.0f;
-
-									glBufferData(GL_ARRAY_BUFFER, (sizeof(Point) * 4), pTex_Pos, GL_STATIC_DRAW);
-
-									if(glGetError() == GL_NO_ERROR)
-									{
-										glVertexAttribPointer(INDEX_UV, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-										if(glGetError() == GL_NO_ERROR)
-										{
-											glEnableVertexAttribArray(INDEX_UV); 
-											this->texture_set = 1;
-											delete [] pTex_Pos;
-											pTex_Pos = NULL;
-
-											if(glGetError() != GL_NO_ERROR)
-												{exit_code = ERR_EN_MDL_ENABLE_VAO;} 
-										}
-										else
-											{exit_code = ERR_EN_MDL_VAO_P;}
-									}
-									else
-										{exit_code = ERR_EN_MDL_VBO_DATA;}
-								}
-								else
-									{exit_code = ERR_EN_MDL_BIND_VBO;}
-							}
-							else
-								{exit_code = ERR_EN_MEM_TEXTURE;}
-						}	
-						else
-							{exit_code = ERR_EN_MIPMAP_TEXTURE;}
-					}
-					else
-						{exit_code = ERR_EN_PAR_TEXTURE;}
-				}
-				else
-					{exit_code = ERR_EN_GL_TEXTURE;}
-			}
-			else
-				{exit_code = ERR_EN_LOAD_TEXTURE;}
-		}
-		else
-			{exit_code = ERR_EN_BIND_TEXTURE;}
-	}
-	else
-		{exit_code = ERR_EN_GEN_TEXTURE;}
+	exit_code = this->create_model();
 
 	return exit_code;
 }
@@ -584,15 +678,43 @@ int CModel_3D::set_texture_square(const char * pFile)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-int CModel_3D::load_mdl_from_obj(const char * pPath)
+int CModel_3D::set_texture_square(const char * pFile, float repeat, int shader_program_id, int flag, int channels)
 {
   int exit_code = ERR_EN_NO_ERROR;
+				
+	if(!this->uv_set)
+	{	
+		this->add_uv(0.0f * repeat, (1.0f - 0.0f) * repeat);		// left bottom
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);		// right bottom
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);		// left top
+		this->add_uv(1.0f * repeat, (1.0f - 0.0f) * repeat);		// right bottom
+		this->add_uv(0.0f * repeat, (1.0f - 1.0f) * repeat);		// left top
+		this->add_uv(1.0f * repeat, (1.0f - 1.0f) * repeat);		// right top
+	}
+
+	exit_code = this->set_texture(pFile, shader_program_id, flag, channels);
+
+	return exit_code;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+int CModel_3D::load_mdl_from_obj(const char * pPath, int shader_program_id)
+{
+	int exit_code = ERR_EN_NO_ERROR;
 	FILE * pFile = NULL;
-	unsigned int num_vertexes = 0;
-	const unsigned short int SIZE = 100;
-	char pBuffer[SIZE];
-	VEC3 * pVertex = NULL;
-	unsigned int vertex_i = 0;
+	const unsigned short int ROW = 100;
+	char pRow[ROW];
+	unsigned int num_v = 0;
+	unsigned int num_uv = 0;
+	unsigned int num_nor = 0;
+	unsigned int num_faces = 0;
+	glm::vec3 * pPos = NULL;
+	glm::vec2 * pUV = NULL;
+	glm::vec3 * pNor = NULL;
+	char * pMtl = new char [ROW];
+	short int flag = 0;
 	unsigned int v1 = 0;
 	unsigned int v2 = 0;
 	unsigned int v3 = 0;
@@ -602,33 +724,48 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 	unsigned int vn1 = 0;
 	unsigned int vn2 = 0;
 	unsigned int vn3 = 0;
-	unsigned int num_vertexes_zip = 0;
-	short int flag = 0;
+	char pDir[ROW];
+	pDir[0] = '\0';
+	char pDir_combine[ROW];
+	pDir_combine[0] = '\0';
 
-	// öffne Datei
+	// Ermittle einen Dateipfad, falls es einen gibt
+
+	copy_str_offset(pPath, pDir, last_position_of_char(pPath, '/'));
+
+	// Datei öffnen
 
 	pFile = fopen(pPath, "r");
 
 	if(pFile != NULL)
 	{
-		// Ermittle Anzahl an Vertexes (echt und komprimiert)
+		// Ermittle Anzahl an Vertexes / Normalvektoren / UV Koordinaten / faces
 
-		while(fgets(pBuffer, SIZE, pFile) != NULL)
-		{			
-			// echt
-
-			if(pBuffer[0] == 'f' && pBuffer[1] == ' ')
-				{num_vertexes += 3;}
-
-			// komprimiert
-
-			if(pBuffer[0] == 'v' && pBuffer[1] == ' ')
-				{num_vertexes_zip++;}
+		while(fgets(pRow, ROW, pFile) != NULL)
+		{
+			if(pRow[0] == 'v' && pRow[1] == ' ')
+				{num_v++;}
+			if(pRow[0] == 'v' && pRow[1] == 't')
+				{num_uv++;}
+			if(pRow[0] == 'v' && pRow[1] == 'n')
+				{num_nor++;}
+			if(pRow[0] == 'f' && pRow[1] == ' ')
+				{num_faces += 3;}
 		}
+
+		// Lege Speicher an
+
+		if(num_v > 0)
+			{pPos = new glm::vec3[num_v];}
+		if(num_uv > 0)
+			{pUV = new glm::vec2[num_uv];}
+		if(num_nor > 0)
+			{pNor = new glm::vec3[num_nor];}
+		this->init_vertexes(num_faces);
 
 		// ermittle Art der Faces / Buffer ist als letztes mit f gefüllt
 
-		switch(count_in_str(pBuffer, '/'))
+		switch(count_in_str(pRow, '/'))
 		{
 			case 0:
 			{
@@ -640,112 +777,163 @@ int CModel_3D::load_mdl_from_obj(const char * pPath)
 			} break;
 			case 6:
 			{
-				if(pBuffer[first_appear(pBuffer, '/') + 1] == '/')
+				if(pRow[first_appear(pRow, '/') + 1] == '/')
 					{flag = FACES_3;}
 				else
 					{flag = FACES_4;}
 			} break;
 		};
 
-		this->init_vertexes(num_vertexes);
-		pVertex = new VEC3[num_vertexes_zip];
+		// bereite für erneutes durchlesen vor
 
-		if(pVertex != NULL)
+		rewind(pFile);
+		clearerr(pFile);
+		num_v = 0;
+		num_uv = 0;
+		num_nor = 0;
+
+		// Nehme Daten nun auf
+
+		while(fgets(pRow, ROW, pFile) != NULL)
 		{
-			// bereite zum erneuten Durchlaufen vor
+			// Vertexkoordinaten
 
-			rewind(pFile);
-			clearerr(pFile);
-
-			while(fgets(pBuffer, SIZE, pFile) != NULL)
+			if(pRow[0] == 'v' && pRow[1] == ' ')
 			{
-				// VERTEXES
+				sscanf(pRow, "v %f %f %f\n", &(pPos[num_v].x), &(pPos[num_v].y), &(pPos[num_v].z));
+				num_v++;
+			}
 
-				if(pBuffer[0] == 'v' && pBuffer[1] == ' ')
+			// Texturkoordinaten
+
+			if(pRow[0] == 'v' && pRow[1] == 't')
+			{
+				sscanf(pRow, "vt %f %f\n", &(pUV[num_uv].x), &(pUV[num_uv].y));
+				num_uv++;
+			}
+
+			// Normalvektoren
+
+			if(pRow[0] == 'v' && pRow[1] == 'n')
+			{
+				sscanf(pRow, "vn %f %f %f\n", &(pNor[num_nor].x), &(pNor[num_nor].y), &(pNor[num_nor].z));
+				num_nor++;
+			}
+
+			// Ermittle Material Datei
+
+			if(is_str_in_str(pRow, "mtllib"))
+			{
+				sscanf(pRow, "mtllib %s\n", pMtl);
+
+				if(strlen(pDir) > 0)
 				{
-					sscanf(pBuffer, "v %f %f %f\n", &(pVertex[vertex_i].x), &(pVertex[vertex_i].y), &(pVertex[vertex_i].z));
-					vertex_i++;
-      	}
-
-				// FACES
-
-				if(pBuffer[0] == 'f' && pBuffer[1] == ' ')
-				{
-					// 1. Möglichkeit v1 v2 v3
-
-					if(flag == FACES_1)
-					{
-						if(sscanf(pBuffer, "f %u %u %u\n", &v1, &v2, &v3) != EOF)
-						{
-							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
-							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
-							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
-						}
-          }
-
-					// 2. Möglichkeit v1/vt1 v2/vt2 v3/vt3
-
-					if(flag == FACES_2)
-					{
-						if(sscanf(pBuffer, "f %u/%u %u/%u %u/%u\n", &v1, &vt1, &v2, &vt2, &v3, &vt3) != EOF)
-						{
-							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
-							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
-							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
-						}
-          }
-
-					// 3. Möglichkeit v1//vn1 v2//vn2 v3//vn3
-
-					if(flag == FACES_3)
-					{
-						if(sscanf(pBuffer, "f %u//%u %u//%u %u//%u\n", &v1, &vn1, &v2, &vn2, &v3, &vn3) != EOF)
-						{
-							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
-							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
-							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
-						}
-          }
-
-					// 4. Möglichkeit v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3
-
-					if(flag == FACES_4)
-					{
-						if(sscanf(pBuffer, "f %u/%u/%u %u/%u/%u %u/%u/%u\n", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3) != EOF)
-						{
-							this->add_vertex_pos(pVertex[v1 - 1].x, pVertex[v1 - 1].y, pVertex[v1 - 1].z);
-							this->add_vertex_pos(pVertex[v2 - 1].x, pVertex[v2 - 1].y, pVertex[v2 - 1].z);
-							this->add_vertex_pos(pVertex[v3 - 1].x, pVertex[v3 - 1].y, pVertex[v3 - 1].z);
-						}
-					}
+					strcat(pDir_combine, pDir);
+					strcat(pDir_combine, pMtl);
 				}
 			}
 
-			// alle Daten geladen, schließe Datei
+			// faces
 
-			fclose(pFile);
-
-			// füge Farbe hinzu
-
-			for(unsigned int i = 0 ; i < this->number_vertexes ; i++)
-				{this->add_vertex_col(0.5f, 0.5f, 0.7f, 1.0f);}
-
-			// erstelle Model
-
-			this->draw_mode = GL_TRIANGLES;
-			exit_code = this->create_model();	
-
-			// Speicher bereinigen
-
-			delete [] pVertex;
+			if(pRow[0] == 'f' && pRow[1] == ' ')
+			{
+				switch(flag)
+				{
+					case FACES_1:
+					{
+						sscanf(pRow, "f %u %u %u\n", &v1, &v2, &v3);
+						this->add_vertex_pos(pPos[v1 - 1].x, pPos[v1 - 1].y, pPos[v1 - 1].z);
+						this->add_vertex_pos(pPos[v2 - 1].x, pPos[v2 - 1].y, pPos[v2 - 1].z);
+						this->add_vertex_pos(pPos[v3 - 1].x, pPos[v3 - 1].y, pPos[v3 - 1].z);
+					} break;
+					case FACES_2:
+					{
+						sscanf(pRow, "f %u/%u %u/%u %u/%u\n", &v1, &vt1, &v2, &vt2, &v3, &vt3);
+						this->add_vertex_pos(pPos[v1 - 1].x, pPos[v1 - 1].y, pPos[v1 - 1].z);		this->add_uv(pUV[vt1 - 1].x, 1.0f - pUV[vt1 - 1].y);
+						this->add_vertex_pos(pPos[v2 - 1].x, pPos[v2 - 1].y, pPos[v2 - 1].z);		this->add_uv(pUV[vt2 - 1].x, 1.0f - pUV[vt2 - 1].y);
+						this->add_vertex_pos(pPos[v3 - 1].x, pPos[v3 - 1].y, pPos[v3 - 1].z);		this->add_uv(pUV[vt3 - 1].x, 1.0f - pUV[vt3 - 1].y);
+					} break;
+					case FACES_3:
+					{
+						sscanf(pRow, "f %u//%u %u//%u %u//%u\n", &v1, &vn1, &v2, &vn2, &v3, &vn3);
+						this->add_vertex_pos(pPos[v1 - 1].x, pPos[v1 - 1].y, pPos[v1 - 1].z);		this->add_normal_vec(pNor[vn1 - 1].x, pNor[vn1 - 1].y, pNor[vn1 - 1].z);
+						this->add_vertex_pos(pPos[v2 - 1].x, pPos[v2 - 1].y, pPos[v2 - 1].z);   this->add_normal_vec(pNor[vn2 - 1].x, pNor[vn2 - 1].y, pNor[vn2 - 1].z);
+						this->add_vertex_pos(pPos[v3 - 1].x, pPos[v3 - 1].y, pPos[v3 - 1].z);		this->add_normal_vec(pNor[vn3 - 1].x, pNor[vn3 - 1].y, pNor[vn3 - 1].z);
+					} break;
+					case FACES_4:
+					{
+						sscanf(pRow, "f %u/%u/%u %u/%u/%u %u/%u/%u\n", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3);
+						this->add_vertex_pos(pPos[v1 - 1].x, pPos[v1 - 1].y, pPos[v1 - 1].z);		this->add_uv(pUV[vt1 - 1].x, 1.0f - pUV[vt1 - 1].y);		this->add_normal_vec(pNor[vn1 - 1].x, pNor[vn1 - 1].y, pNor[vn1 - 1].z);
+						this->add_vertex_pos(pPos[v2 - 1].x, pPos[v2 - 1].y, pPos[v2 - 1].z);		this->add_uv(pUV[vt2 - 1].x, 1.0f - pUV[vt2 - 1].y);		this->add_normal_vec(pNor[vn2 - 1].x, pNor[vn2 - 1].y, pNor[vn2 - 1].z);
+						this->add_vertex_pos(pPos[v3 - 1].x, pPos[v3 - 1].y, pPos[v3 - 1].z);		this->add_uv(pUV[vt3 - 1].x, 1.0f - pUV[vt3 - 1].y);		this->add_normal_vec(pNor[vn3 - 1].x, pNor[vn3 - 1].y, pNor[vn3 - 1].z);
+					} break;
+				};
+			}
 		}
-		else
-			{exit_code = ERR_EN_NO_MEM;}
+
+		// Datei schließen
+
+		fclose(pFile);
+
+		// Speicher bereinigen
+
+		if(pPos != NULL)
+			{delete [] pPos;}
+		if(pUV != NULL)
+			{delete [] pUV;}
+		if(pNor != NULL)
+			{delete [] pNor;}
+
+		// Model erstellen
+
+		this->draw_mode = GL_TRIANGLES;
+		exit_code = this->create_model();
+
+		if(exit_code == ERR_EN_NO_ERROR)
+		{
+			// Materialdatei öffnen
+		
+			pFile = fopen(pDir_combine, "r");
+
+			if(pFile != NULL)
+			{
+				while(fgets(pRow, ROW, pFile) != NULL)
+				{
+					if(is_str_in_str(pRow, "map_Kd"))
+					{
+						sscanf(pRow, "map_Kd %s\n", pMtl);
+						pDir_combine[0] = '\0';
+						strcat(pDir_combine, pDir);
+						strcat(pDir_combine, pMtl);
+						exit_code = this->set_texture(pDir_combine, shader_program_id, TEXTURE_DIFFUSE, GL_RGB);
+					}
+
+					if(exit_code == ERR_EN_NO_ERROR)
+					{
+						if(is_str_in_str(pRow, "map_Ks"))
+						{
+							sscanf(pRow, "map_Ks %s\n", pMtl);
+							pDir_combine[0] = '\0';
+							strcat(pDir_combine, pDir);
+							strcat(pDir_combine, pMtl);
+							exit_code = this->set_texture(pDir_combine, shader_program_id, TEXTURE_SPECULAR, GL_RGB);
+						}
+					}
+				}
+
+				// Datei schließen
+
+				fclose(pFile);
+			}
+			else
+				{exit_code = ERR_EN_FOPEN;}
+		}
 	}
 	else
 		{exit_code = ERR_EN_FOPEN;}
 
-  return exit_code;
+	delete [] pMtl;
+	return exit_code;
 }
 
 //------------------------------------------------------------------------
@@ -759,309 +947,127 @@ unsigned int CModel_3D::get_num_vertexes()
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_circle(float radius, float num_v, uint8_t red, uint8_t green, uint8_t blue)
+void CModel_3D::set_material(int flag)
 {
-	float r = (float)((float) red / (float) 255);
-	float g = (float)((float) green / (float) 255);
-	float b = (float)((float) blue / (float) 255);
-	float current_angle = 0.0f;
-	float angle_step = 360.0f / num_v;
-	
-	this->init_vertexes(num_v + 2);					// Mittelpunkt und Abschluss müssen dazugezählt werden
-	this->add_vertex_pos(0.0f, 0.0f, 0.0f);	// Mittelpunkt
+  this->material_flag = flag;
 
-	for(int i = 0 ; i < num_v ; i++)
-  {
-		this->add_vertex_pos(radius * cosf((current_angle * PI) / 180), radius * sinf((current_angle * PI) / 180), 0.0f);
-		current_angle += angle_step;
-	}
-
-	this->add_vertex_pos(radius * cosf((0.0f * PI) / 180), radius * sinf((0.0f * PI) / 180), 0.0f); // Abschluss
-
-	// Farben
-
-	for(int i = 0 ; i < (num_v + 2) ; i++)
-		{this->add_vertex_col(r, g, b, 1.0f);}
-
-	// Zeichen Modus
-
-	this->draw_mode = GL_TRIANGLE_FAN;
-
-	// Model erstellen
-
-	this->create_model();
+	switch(this->material_flag)
+	{
+		case MAT_EMERALD:
+		{
+			this->shine_intensity = 0.6f;
+		} break;
+		case MAT_JADE:
+		{
+			this->shine_intensity = 0.1f;
+		} break;
+		case MAT_OBSIDIAN:
+		{
+			this->shine_intensity = 0.3f;
+		} break;
+		case MAT_PEARL:
+		{
+			this->shine_intensity = 0.088f;
+		} break;
+		case MAT_RUBY:
+		{
+			this->shine_intensity = 0.6f;
+		} break;
+		case MAT_TURQUOISE:
+		{
+			this->shine_intensity = 0.1f;
+		} break;
+		case MAT_BRASS:
+		{
+			this->shine_intensity = 0.21794872f;
+		} break;
+		case MAT_BRONZE:
+		{
+			this->shine_intensity = 0.2f;
+		} break;
+		case MAT_CHROME:
+		{
+			this->shine_intensity = 0.6f;
+		} break;
+		case MAT_COPPER:
+		{
+			this->shine_intensity = 0.1f;
+		} break;
+		case MAT_GOLD:
+		{
+			this->shine_intensity = 0.4f;
+		} break;
+		case MAT_SILVER:
+		{
+			this->shine_intensity = 0.4f;
+		} break;
+		case MAT_BLACK_PLASTIC:
+		{
+			this->shine_intensity = 0.25f;
+		} break;
+		case MAT_CYAN_PLASTIC:
+		{
+			this->shine_intensity = 0.25f;
+		} break;
+		case MAT_GREEN_PLASTIC:
+		{
+			this->shine_intensity = 0.25f;
+		} break;
+		case MAT_RED_PLASTIC:
+		{
+			this->shine_intensity = 0.25f;
+		} break;
+		case MAT_WHITE_PLASTIC:
+		{
+			this->shine_intensity = 0.25f;
+		} break;
+		case MAT_YELLOW_PLASTIC:
+		{
+			this->shine_intensity = 0.25f;
+		} break;
+		case MAT_BLACK_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_CYAN_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_GREEN_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_RED_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_BLUE_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_WHITE_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_YELLOW_RUBBER:
+		{
+			this->shine_intensity = 0.078125f;
+		} break;
+		case MAT_STEEL:
+		{
+			this->shine_intensity = 64.0f;
+		} break;
+	};
 }
 
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CModel_3D::create_sphere(float radius, float num_v, uint8_t red, uint8_t green, uint8_t blue, short int flag)
+void CModel_3D::finish_creation()
 {
-	this->create_flag = flag;
-
-	// num_v muss gerade sein
-
-	if((int)num_v < 8)
-		{num_v = 8.0f;}
-	if(((int)num_v % 2) != 0)
-		{num_v += 1;}
-	if((((int)num_v / 2) % 2) != 0)
-		{num_v += 2;}
-
-  float r = (float)((float) red / (float) 255);
-	float g = (float)((float) green / (float) 255);
-	float b = (float)((float) blue / (float) 255);
-	int shells_half = forced_into((((int)num_v - 2) / 2), 2);		// Schalen pro Kreishälfte auf z-Ebene
-	float angle_step = 360.0f / num_v;
-	float current_angle = 0.0f;
-	float current_angle_z = 0.0f;
-	VEC3 ** Sphere_Points = new VEC3 * [shells_half + 1];
-
-	for(int i = 0 ; i < (shells_half + 1) ; i++)
-		{Sphere_Points[i] = new VEC3[(int) num_v];}
-
-	float z = 0.0f;
-	float y = 0.0f; 
-
-	////////////////////////
-	// Modelpunkte erstellen
-	////////////////////////
-
-	// erstelle einen Halbkreis
-	// beginne mit größtem Radius
-
-	for(int i = 0 ; i < (int)num_v ; i++)
+	if(this->pTex_Pos != NULL)
 	{
-		Sphere_Points[0][i].x = radius * cosf((current_angle * PI) / 180);
-		Sphere_Points[0][i].y = radius * sinf((current_angle * PI) / 180);
-		Sphere_Points[0][i].z = z;
-
-		current_angle += angle_step;
+		delete [] pTex_Pos;
+		this->pTex_Pos = NULL;
 	}
-	
-	// nun alle nach außen laufenden Schalen	
-
-	for(int i = 1 ; i < shells_half ; i++)
-	{
-		current_angle = 0.0f;
-		current_angle_z += angle_step;
-		y = radius * cosf((current_angle_z * PI) / 180);
-		z = radius * sinf((current_angle_z * PI) / 180); 
-
-		// berechne Schale
-
-		for(int h = 0 ; h < (int)num_v ; h++)
-		{
-			Sphere_Points[i][h].x = y * cosf((current_angle * PI) / 180);
-			Sphere_Points[i][h].y = y * sinf((current_angle * PI) / 180);
-			Sphere_Points[i][h].z = z;
-
-			current_angle += angle_step;
-		}
-	}
-
-	// ganz außen
-
-	for(int i = 0 ; i < (int)num_v ; i++)
-	{
-		Sphere_Points[shells_half][i].x = 0.0f;
-		Sphere_Points[shells_half][i].y = 0.0f;
-		Sphere_Points[shells_half][i].z = radius;
-	}
-
-	////////////////////////
-	// Modelmesh erstellen
-	////////////////////////
-
-	this->init_vertexes((int)num_v * 6 * shells_half * 2);
-
-	// Vorderseite
-
-	for(int i = 0 ; i < shells_half ; i++)
-	{
-		for(int h = 0 ; h < (int)num_v ; h++)
-		{
-			// Verbinde ein Viereck
-			// links oben
-			// links unten
-			// rechts unten
-			// rechts unten
-			// links oben
-			// rechts oben
-			
-			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, Sphere_Points[i][h % (int)num_v].z);
-			this->add_vertex_pos(Sphere_Points[i + 1][h % (int)num_v].x, Sphere_Points[i + 1][h % (int)num_v].y, Sphere_Points[i + 1][h % (int)num_v].z);
-			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, Sphere_Points[i + 1][(h + 1) % (int)num_v].z);	
-			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, Sphere_Points[i + 1][(h + 1) % (int)num_v].z);
-			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, Sphere_Points[i][h % (int)num_v].z);												
-			this->add_vertex_pos(Sphere_Points[i][(h + 1) % (int)num_v].x, Sphere_Points[i][(h + 1) % (int)num_v].y, Sphere_Points[i][(h + 1) % (int)num_v].z);			
-
-			// Farben hinzufügen
-
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);	
-		}
-	}
-
-	// Rückseite
-
-	for(int i = 0 ; i < shells_half ; i++)
-	{
-		for(int h = 0 ; h < (int)num_v ; h++)
-		{
-			// Verbinde ein Viereck
-			// links oben
-			// links unten
-			// rechts unten
-			// rechts unten
-			// links oben
-			// rechts oben
-
-			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, -Sphere_Points[i][h % (int)num_v].z);
-			this->add_vertex_pos(Sphere_Points[i + 1][h % (int)num_v].x, Sphere_Points[i + 1][h % (int)num_v].y, -Sphere_Points[i + 1][h % (int)num_v].z);
-			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, -Sphere_Points[i + 1][(h + 1) % (int)num_v].z);	
-			this->add_vertex_pos(Sphere_Points[i + 1][(h + 1) % (int)num_v].x, Sphere_Points[i + 1][(h + 1) % (int)num_v].y, -Sphere_Points[i + 1][(h + 1) % (int)num_v].z);
-			this->add_vertex_pos(Sphere_Points[i][h % (int)num_v].x, Sphere_Points[i][h % (int)num_v].y, -Sphere_Points[i][h % (int)num_v].z);												
-			this->add_vertex_pos(Sphere_Points[i][(h + 1) % (int)num_v].x, Sphere_Points[i][(h + 1) % (int)num_v].y, -Sphere_Points[i][(h + 1) % (int)num_v].z);			
-
-			// Farben hinzufügen
-			
-			if(this->create_flag == MDL_COLOR)
-			{
-				this->add_vertex_col(r, g, b, 1.0f);
-				this->add_vertex_col(r, g, b, 1.0f);
-				this->add_vertex_col(r, g, b, 1.0f);
-				this->add_vertex_col(r, g, b, 1.0f);
-				this->add_vertex_col(r, g, b, 1.0f);
-				this->add_vertex_col(r, g, b, 1.0f);			
-      }
-		}
-	}
-
-	// Speicher freigeben
-
-	for(int i = 0 ; i < (shells_half + 1) ; i++)
-		{delete [] Sphere_Points[i];}
-	
-	delete [] Sphere_Points;
-
-	// Zeichen Modus
-
-	this->draw_mode = GL_TRIANGLES;
-
-	// Model erstellen
-
-	this->create_model();
-}
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CModel_3D::create_pyramid(float size, float to_peak, uint8_t red, uint8_t green, uint8_t blue, short int flag)
-{
-	this->create_flag = flag;
-
-	float r = (float)((float) red / (float) 255);
-	float g = (float)((float) green / (float) 255);
-	float b = (float)((float) blue / (float) 255);
-
-	this->init_vertexes(PYRAMID_VERT);
-	this->add_vertex_pos(-size, -(to_peak / 2), size);		// vordere Seite
-	this->add_vertex_pos(size, -(to_peak / 2), size);
-	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
-	this->add_vertex_pos(-size, -(to_peak / 2), -size);		// hintere Seite
-	this->add_vertex_pos(size, -(to_peak / 2), -size);
-	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
-	this->add_vertex_pos(-size, -(to_peak / 2), size);		// linke Seite
-	this->add_vertex_pos(-size, -(to_peak / 2), -size);
-	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
-	this->add_vertex_pos(size, -(to_peak / 2), size);     // rechte Seite
-	this->add_vertex_pos(size, -(to_peak / 2), -size);
-	this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
-
-	if(this->create_flag == MDL_COLOR)
-	{
-		for(int i = 0 ; i < PYRAMID_VERT ; i++)
-			{this->add_vertex_col(r, g, b, 1.0f);}
-  }
-
-	// Zeichen Modus
-
-	this->draw_mode = GL_TRIANGLES;
-
-	// Model erstellen
-
-	this->create_model();
-}  
-
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
-
-void CModel_3D::create_cone(float radius, float to_peak, float num_v, uint8_t red, uint8_t green, uint8_t blue, short int flag)
-{
-	this->create_flag = flag;
-	float r = (float)((float) red / (float) 255);
-	float g = (float)((float) green / (float) 255);
-	float b = (float)((float) blue / (float) 255);
-	float angle_step = 360.0f / num_v;
-	float current_angle = 0.0f;
-	VEC3 * pVertex = new VEC3[(int)num_v];				// Kreisfläche / ein zusätzlicher für den Abschluss
-
-	for(int i = 0 ; i < num_v ; i++)
-	{
-		pVertex[i].x = radius * cosf((current_angle * PI) / 180);
-		pVertex[i].z = radius * sinf((current_angle * PI) / 180);
-		pVertex[i].y = -(to_peak / 2);
-		current_angle += angle_step;
-	}
-
-	// Model erstellen
-
-	this->init_vertexes((3 * (int)num_v) * 2);
-
-	// Grundfläche
-
-  for(int i = 0 ; i < (int)num_v ; i++)
-	{
-		this->add_vertex_pos(pVertex[i].x, pVertex[i].y, pVertex[i].z);
-		this->add_vertex_pos(pVertex[(i + 1) % (int)num_v].x, pVertex[(i + 1) % (int)num_v].y, pVertex[(i + 1) % (int)num_v].z);
-		this->add_vertex_pos(0.0f, -(to_peak / 2), 0.0f);
-		
-		if(this->create_flag == MDL_COLOR)
-		{
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-    }
-	}
-
-	// Spitze
-
-	for(int i = 0 ; i < (int)num_v ; i++)
-	{
-		this->add_vertex_pos(pVertex[i].x, pVertex[i].y, pVertex[i].z);
-		this->add_vertex_pos(pVertex[(i + 1) % (int)num_v].x, pVertex[(i + 1) % (int)num_v].y, pVertex[(i + 1) % (int)num_v].z);
-		this->add_vertex_pos(0.0f, (to_peak / 2), 0.0f);
-
-		if(this->create_flag == MDL_COLOR)
-		{
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-			this->add_vertex_col(r, g, b, 1.0f);
-    }
-	}
-
-	// Zeichen Modus
-
-	this->draw_mode = GL_TRIANGLES;
-
-	// Model erstellen
-
-	this->create_model();
-
-	delete [] pVertex;
 }

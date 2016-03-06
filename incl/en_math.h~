@@ -1,6 +1,13 @@
 #ifndef H_EN_MATH
 #define H_EN_MATH
 
+/*
+	Author: 	Patrick-Christopher Mattulat
+	City:			Berlin
+	License:	See License File!
+	Contact: 	drumstar@hotmail.de
+*/
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Konstanten
@@ -20,7 +27,7 @@ typedef struct En_Point
   float x;
 	float y;
 } Point;
-
+/*
 typedef struct En_Math_fVec3
 {
   float x;
@@ -35,7 +42,7 @@ typedef struct En_Math_fVec4
 	float b;
 	float a;
 } VEC4;
-
+*/
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 // Funktionsprototypen

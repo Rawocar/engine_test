@@ -10,6 +10,16 @@
 
 ///////////////////////////////////////////
 ///////////////////////////////////////////
+// Einbindungen
+///////////////////////////////////////////
+///////////////////////////////////////////
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+///////////////////////////////////////////
+///////////////////////////////////////////
 // Funktionsprototypen
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -24,6 +34,9 @@
 
 unsigned int count_in_str(const char*, char);
 
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
 /*
 	Beschreibung:			Diese Funktion findet heraus wo ein Zeichen das erste Mal
 										in einem String auftaucht.
@@ -33,5 +46,43 @@ unsigned int count_in_str(const char*, char);
 */
 
 unsigned int first_appear(const char*, char);
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+/*
+	Beschreibung:			Diese Funktion prüft, ob ein String in einem anderen String vorkommt.
+	1. Parameter:			Quelle
+	2. Parameter:			String
+	return:						boolean
+*/
+
+bool is_str_in_str(const char*, const char*);
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+/*
+	Beschreibung:			Diese Funktion gibt den Index zurück, an dem das gesuchte Zeichen zuletzt
+										im Quellstring auftaucht.
+	1. Parameter:			Quelle
+	2. Parameter:			gesuchtes Zeichen
+	return:						letzte Position
+*/
+
+unsigned int last_position_of_char(const char*, char);
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+
+/*
+	Beschreibung:			Diese Funktion kopiert eine Quelle in einen Buffer nur bis zu einem bestimmten
+										Offset.
+	1. Parameter:			Quelle
+	2. Parameter:			Buffer
+	3. Parameter:			Offset
+*/
+
+void copy_str_offset(const char*, char*, unsigned int);
 
 #endif

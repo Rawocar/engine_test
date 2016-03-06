@@ -1,6 +1,6 @@
 #include "../incl/en_shader.h"
 
-int CApp::load_shader(const char * pFile, GLenum shader_spec)
+int CApp::load_shader(unsigned short int si, const char * pFile, GLenum shader_spec)
 {
   int id = 0;
   int len = len_file(pFile);
@@ -66,7 +66,7 @@ int CApp::load_shader(const char * pFile, GLenum shader_spec)
 								this->write_log("<b>ENGINE:</b> glCompileShader: OK", DB_MSG_OK);
 							#endif
 
-							glAttachShader(this->shader_program, id);
+							glAttachShader(this->pShader[si].prog_id, id);
 
 							if((this->gl_err = glGetError()) == GL_NO_ERROR)
 							{
@@ -145,7 +145,7 @@ int CApp::load_shader(const char * pFile, GLenum shader_spec)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void CApp::unload_shader()
+void CApp::unload_shader(unsigned short int si)
 {
 	#if EMODE == EDEBUG_MODE
 		char * pBuffer = NULL;
@@ -158,14 +158,14 @@ void CApp::unload_shader()
 
 	// shader entladen
 
-  for(unsigned short int i = 0 ; i < (this->get_shader_number()) ; i++)
+  for(unsigned short int i = 0 ; i < (this->get_shader_number(si)) ; i++)
 	{
-		glDetachShader(this->shader_program, this->get_shader_id(i));
+		glDetachShader(this->pShader[si].prog_id, this->get_shader_step_id(si, i));
 
 		if((this->gl_err = glGetError()) == GL_NO_ERROR)
 		{
 			#if EMODE == EDEBUG_MODE
-				sprintf(pBuffer, "<b>ENGINE:</b> glDetachShader: OK (%u / %u)", i + 1, this->get_shader_number());
+				sprintf(pBuffer, "<b>ENGINE:</b> glDetachShader: OK (%u / %u)", i + 1, this->get_shader_number(si));
 				this->write_log(pBuffer, DB_MSG_OK);
 			#endif
 		}
@@ -184,14 +184,14 @@ void CApp::unload_shader()
 	{
 		// shader löschen
 
-		for(unsigned short int i = 0 ; i < (this->get_shader_number()) ; i++)
+		for(unsigned short int i = 0 ; i < (this->get_shader_number(si)) ; i++)
     {
-			glDeleteShader(this->get_shader_id(i));
+			glDeleteShader(this->get_shader_step_id(si, i));
 
 			if((this->gl_err = glGetError()) == GL_NO_ERROR)
 			{
 				#if EMODE == EDEBUG_MODE
-					sprintf(pBuffer, "<b>ENGINE:</b> glDeleteShader: OK (%u / %u)", i + 1, this->get_shader_number());
+					sprintf(pBuffer, "<b>ENGINE:</b> glDeleteShader: OK (%u / %u)", i + 1, this->get_shader_number(si));
 					this->write_log(pBuffer, DB_MSG_OK);
 				#endif
 			}
@@ -210,7 +210,7 @@ void CApp::unload_shader()
 		{
 			// Programm löschen
 
-			glDeleteProgram(this->shader_program);
+			glDeleteProgram(this->pShader[si].prog_id);
 
 			if((this->gl_err = glGetError()) == GL_NO_ERROR)
 			{

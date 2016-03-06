@@ -23,5 +23,9 @@
 #define DB_MSG_OK					-32
 #define DB_MSG_ERR				-33
 #define DB_MSG_HL					-34
+#define SHADER_MAIN				0
+#define SHADER_LIGHT			1
+#define ON								1
+#define OFF								0
 
 #endif

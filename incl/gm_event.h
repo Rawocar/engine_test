@@ -31,22 +31,21 @@
 
 /*
   Beschreibung:			Diese Funktion behandelt alle Events.
-	1. Parameter:			SDL_Event
-	2. Parameter:			Zeiger auf Spielzustand
-	3. Parameter:			poly mode
-	4. Parameter:			Programmvariable
+	1. Parameter:			Zeiger auf Spielzustand
+	2. Parameter:			poly mode
+	3. Parameter:			Programmvariable
 */
 
-void event_handler(SDL_Event, Game_State*, unsigned short int*, CApp*);
+void event_handler(Game_State*, unsigned short int*, CApp*);
 
 /*
 	Beschreibung:			Diese Funktion behandelt alle keydown events.
-	1. Parameter:			SDL_Event
+	1. Parameter:			Programmvariable
 	2. Parameter:			Zeiger auf Spielzustand
 	3. Parameter:			poly mode
 */
 
-void event_kd(SDL_Event, Game_State*, unsigned short int*);
+void event_kd(CApp*, Game_State*, unsigned short int*);
 
 /*
 	Beschreibung:			Diese Funktion behandelt ESC_kd events.
@@ -64,18 +63,18 @@ void p_kd(unsigned short int*);
 
 /*
 	Beschreibung:			Diese Funktion behandelt alle mouse wheel events.
-	1. Parameter:			SDL_Event
-	2. Parameter:			Programmvariable
+	1. Parameter:			Programmvariable
+	2. Parameter:			Zeiger auf Spielzustand
 */
 
-void event_mw(SDL_Event, CApp * pApp);
+void event_mw(CApp * pApp, Game_State*);
 
 /*
 	Beschreibung:			Diese Funktion zoomt die Kamera heran oder heraus.
-	1. Parameter: 		SDL_Event
-	2. Parameter:			Programmvariable
+	1. Parameter:			Programmvariable
+	2. Parameter:			Zeiger auf Spielzustand
 */
 
-void zoom_camera(SDL_Event, CApp*);
+void zoom_camera(CApp*, Game_State*);
 
 #endif

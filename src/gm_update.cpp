@@ -6,7 +6,7 @@ int gm_update(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 
 	// Events
 
-	event_handler(pApp->get_eventx(), pstate, ppoly_mode, pApp);
+	event_handler(pstate, ppoly_mode, pApp);
 
 	// Spielzustände
 
@@ -14,21 +14,21 @@ int gm_update(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 	{
 		case load_menu:
 		{
-      // Projektion von Model 0 berechnen
+      // Projektion von Model berechnen
 
-			pApp->rotate(0, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(1, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(2, (pApp->cpu_get_timestep() * -0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			//pApp->rotate(4, (pApp->cpu_get_timestep() * -0.30f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(5, (pApp->cpu_get_timestep() * -0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(6, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f));
-			pApp->rotate(7, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(1.0f, 0.0f, 0.0f));
+			if(pApp->print_error("Rotiere Holzkiste...\n", pApp->rotate(0, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f))) == 1)
+				{*pstate = quit;}
+			if(pApp->print_error("Rotiere Steinblock...\n", pApp->rotate(1, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f))) == 1)
+				{*pstate = quit;}
+			if(pApp->print_error("Rotiere Trooper...\n", pApp->rotate(2, (pApp->cpu_get_timestep() * 0.90f), glm::vec3(0.0f, 1.0f, 0.0f))) == 1)
+				{*pstate = quit;}
 		} break;
 		case quit:
 		{
 			// Shader entladen
 
-			pApp->unload_shader();
+			pApp->unload_shader(SHADER_MAIN);
+			pApp->unload_shader(SHADER_LIGHT);
 			*pstate = end;
 		} break;
 		case end:

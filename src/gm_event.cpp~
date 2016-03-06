@@ -1,16 +1,18 @@
 #include "../incl/gm_event.h"
 
-void event_handler(SDL_Event event, Game_State * pstate, unsigned short int * ppoly_mode, CApp * pApp)
+void event_handler(Game_State * pstate, unsigned short int * ppoly_mode, CApp * pApp)
 {
+	SDL_Event event = pApp->get_eventx();
+
   switch(event.type)
 	{
 		case SDL_KEYDOWN:
 		{
-			event_kd(event, pstate, ppoly_mode);
+			event_kd(pApp, pstate, ppoly_mode);
 		} break;
 		case SDL_MOUSEWHEEL:
 		{
-      event_mw(event, pApp);
+      event_mw(pApp, pstate);
 		} break;
 		default:
 		{
@@ -22,8 +24,10 @@ void event_handler(SDL_Event event, Game_State * pstate, unsigned short int * pp
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void event_kd(SDL_Event event, Game_State * pstate, unsigned short int * ppoly_mode)
+void event_kd(CApp * pApp, Game_State * pstate, unsigned short int * ppoly_mode)
 {
+	SDL_Event event = pApp->get_eventx();
+
   switch(event.key.keysym.sym)
 	{
 		case SDLK_ESCAPE:
@@ -33,6 +37,16 @@ void event_kd(SDL_Event event, Game_State * pstate, unsigned short int * ppoly_m
 		case SDLK_p:
 		{
 			p_kd(ppoly_mode);
+		} break;
+		case SDLK_l:
+		{
+			for(unsigned int i = 0 ; i < pApp->get_number_lights() ; i++)
+			{
+				if(pApp->get_light_state(i) == ON)
+					{pApp->switch_light(i, OFF);}
+				else
+					{pApp->switch_light(i, ON);}
+			}
 		} break;
 		default:
 		{
@@ -62,11 +76,11 @@ void esc_kd(Game_State * pstate)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void event_mw(SDL_Event event, CApp * pApp)
+void event_mw(CApp * pApp, Game_State * pstate)
 {
 	// Kamera zoom
 
-	zoom_camera(event, pApp);
+	zoom_camera(pApp, pstate);
 }
 
 //------------------------------------------------------------------------
@@ -96,18 +110,23 @@ void p_kd(unsigned short int * ppoly_mode)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-void zoom_camera(SDL_Event event, CApp * pApp)
+void zoom_camera(CApp * pApp, Game_State * pstate)
 {
+	SDL_Event event = pApp->get_eventx();
   glm::vec3 camera_pos = pApp->get_camera_pos();
 	float factor_inc = 1.05f;
 	float factor_dec = 0.95f;
 
-	// heraus zoomen bix max .z = 9.0f
+	// heraus zoomen bis max .z = 9.0f
 
 	if(event.wheel.y < 0)
 	{
-    if(camera_pos.z * factor_inc < 90.0f)
-			{pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_inc, camera_pos.z * factor_inc));}
+    if(camera_pos.z * factor_inc < 9.0f)
+		{
+			pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_inc, camera_pos.z * factor_inc));
+			if(pApp->print_error("Kamera...\n", pApp->proj()) == 1)
+				{*pstate = quit;}
+		}
 	}
 
 	// heran zoomen bis max .z = 3.0f
@@ -115,6 +134,10 @@ void zoom_camera(SDL_Event event, CApp * pApp)
 	if(event.wheel.y > 0)
 	{
 		if(camera_pos.z * factor_dec > 3.0f)
-			{pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_dec, camera_pos.z * factor_dec));}
+		{
+			pApp->set_camera_pos(glm::vec3(camera_pos.x, camera_pos.y * factor_dec, camera_pos.z * factor_dec));
+			if(pApp->print_error("Kamera...\n", pApp->proj()) == 1)
+				{*pstate = quit;}
+		}
 	}
 }
